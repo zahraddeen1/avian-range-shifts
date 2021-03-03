@@ -8,30 +8,16 @@ library(tidyverse)
 
 theme_set(theme_classic())
 
-### Source function to get eBirdst PIs for a species
+### read in ebird occurrence data and land cover data at breeding polygons 
+### processed on longleaf HPC
 
-source("code/get_ebird_pis.R")
+## Join occurrence probabilities with land cover at that site
 
-### Species list
+## For each species, average occurrence probability by land cover
 
-species <- read_csv("raw_data/species_list.csv")
+## For each species, null expectation (average proportion land cover by class in breeding range polygon)
 
-ebird_bbs <- ebirdst::ebirdst_runs %>% 
-  left_join(species, by = c("common_name" ="english_common_name")) %>%
-  filter(!is.na(french_common_name))
-
-### For each species, create a PI csv and save to /pis
-# easpho & easblu bug - skip
-
-p <- "/bigdata/pis/"
-
-for(s in spp_left$species_code) {
-  
-  get_breedingrange_pis(path = p, spp_code = s)
-  
-  print(paste0(Sys.time(), " species complete: ", s))
-  
-}
+#### Old code #####
 
 ## Calculate Shannon Index of model land cover PI for each species
 
