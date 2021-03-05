@@ -7,7 +7,7 @@
 #SBATCH --time=6-0
 #SBATCH --partition=general
 #SBATCH --ntasks=1
-#SBATCH --mem=4G
+#SBATCH --mem=10G
 
 # Print the task id.
 echo "My SLURM_ARRAY_TASK_ID: " $SLURM_ARRAY_TASK_ID
