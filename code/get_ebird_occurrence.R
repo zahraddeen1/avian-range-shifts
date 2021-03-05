@@ -63,7 +63,6 @@ ebird_bbs <- ebirdst::ebirdst_runs %>%
   filter(!is.na(french_common_name))
 
 ### For each species, create an occurrence csv and save
-# easpho & easblu bug - skip
 
 p <- "/occ/"
 

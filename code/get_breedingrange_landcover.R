@@ -1,10 +1,13 @@
 ### Get breeding range land cover composition
-### Run on longleaf HPC
+### Run on longleaf HPC as job array, 50 spp per job
 
 library(sf)
 library(raster)
 library(dplyr)
 library(stringr)
+
+# Array ID
+task_id <- Sys.getenv("SLURM_ARRAY_TASK_ID")
 
 # top level directory
 dir <- "/proj/hurlbertlab/"
@@ -14,6 +17,9 @@ range_dir <- "/proj/hurlbertlab/bird_range_shps/All/"
 
 # land cover data
 lc_dir <- "/proj/hurlbertlab/cec_north_america/north_america_2015/"
+
+# output directory
+output_dir <- "/proj/hurlbertlab/gdicecco/ch3_hab_niche/breedrange_lc/"
 
 ### Breeding range species list
 
@@ -43,6 +49,16 @@ range_files <- data.frame(file = list.files(range_dir)) %>%
 spp_list <- range_files %>%
   right_join(bbs_spp, by = c("file_binomial" = "matched_name"))
 
+if(task_id < 8) {
+  start <- as.numeric(task_id)*50 - 49
+  end <- as.numeric(task_id)*50
+} else {
+  start <- as.numeric(task_id)*50 - 49
+  end <- nrow(spp_list)
+}
+
+spp_list_subs <- spp_list[start:end, ]
+
 ### Land cover data
 
 na_lc <- raster(paste0(lc_dir, "NA_NALCMS_2015_LC_30m_LAEA_mmu5pix_.tif"))
@@ -51,9 +67,9 @@ lc_crs <- st_crs(na_lc)
 
 ### For each species, save proportion cover for each land cover class across range
 
-res <- data.frame(value = c(), count = c(), spp = c())
-
-for(s in spp_list$file) {
+for(s in spp_list_subs$file) {
+  
+  spp <- spp_list_subs$file_binomial[spp_list_subs$file == s]
   
   br <- read_sf(paste0(range_dir, s))
   
@@ -70,9 +86,6 @@ for(s in spp_list$file) {
   lc_df <- data.frame(lc_freq)
   lc_df$spp <- s
   
-  res <- rbind(res, lc_df)
+  write.csv(lc_df, paste0(output_dir, spp, "_breedingrange_lc.csv"), row.names = F)
   
 }
-
-write.csv(res,"breeding_range_landcover.csv", row.names = F)
-

@@ -1,0 +1,70 @@
+file,spp_name,binomial,species_id,aou,english_common_name,french_common_name,spanish_common_name,sporder,family,genus,species,old_genus
+NA,NA,Streptopelia chinensis,141,3151,Spotted Dove,Tourterelle tigrine,Streptopelia chinensis,Columbiformes,Columbidae,Streptopelia,chinensis,NA
+NA,NA,Picoides scalaris,741,3960,Ladder-backed Woodpecker,Pic arlequin,Picoides scalaris,Piciformes,Picidae,Picoides,scalaris,Dryobates
+NA,NA,Picoides nuttallii,742,3970,Nuttall's Woodpecker,Pic de Nuttall,Picoides nuttallii,Piciformes,Picidae,Picoides,nuttallii,Dryobates
+NA,NA,Picoides pubescens,743,3940,Downy Woodpecker,Pic mineur,Picoides pubescens,Piciformes,Picidae,Picoides,pubescens,Dryobates
+NA,NA,Picoides villosus,745,3930,Hairy Woodpecker,Pic chevelu,Picoides villosus,Piciformes,Picidae,Picoides,villosus,Leuconotopicus
+NA,NA,Picoides arizonae,746,3975,Arizona Woodpecker,Pic d'Arizona,Picoides arizonae,Piciformes,Picidae,Picoides,arizonae,Leuconotopicus
+NA,NA,Picoides borealis,748,3950,Red-cockaded Woodpecker,Pic à face blanche,Picoides borealis,Piciformes,Picidae,Picoides,borealis,Leuconotopicus
+NA,NA,Picoides albolarvatus,749,3990,White-headed Woodpecker,Pic à tête blanche,Picoides albolarvatus,Piciformes,Picidae,Picoides,albolarvatus,Leuconotopicus
+NA,NA,Picoides dorsalis,750,4010,American Three-toed Woodpecker,Pic à dos rayé,Picoides dorsalis,Piciformes,Picidae,Picoides,dorsalis,NA
+NA,NA,Dryocopus pileatus,761,4050,Pileated Woodpecker,Grand Pic,Dryocopus pileatus,Piciformes,Picidae,Dryocopus,pileatus,Hylatomus
+NA,NA,Aphelocoma woodhouseii,989,4813,Woodhouse's Scrub-Jay,Geai de Woodhouse,Aphelocoma woodhouseii,Passeriformes,Corvidae,Aphelocoma,woodhouseii,NA
+NA,NA,Pica hudsonia,995,4750,Black-billed Magpie,Pie d'Amérique,Pica hudsonia,Passeriformes,Corvidae,Pica,hudsonia,NA
+NA,NA,Poecile carolinensis,1030,7360,Carolina Chickadee,Mésange de Caroline,Poecile carolinensis,Passeriformes,Paridae,Poecile,carolinensis,Parus
+NA,NA,Poecile atricapillus,1031,7350,Black-capped Chickadee,Mésange à tête noire,Poecile atricapillus,Passeriformes,Paridae,Poecile,atricapillus,Parus
+NA,NA,Poecile gambeli,1032,7380,Mountain Chickadee,Mésange de Gambel,Poecile gambeli,Passeriformes,Paridae,Poecile,gambeli,Parus
+NA,NA,Poecile sclateri,1033,7370,Mexican Chickadee,Mésange grise,Poecile sclateri,Passeriformes,Paridae,Poecile,sclateri,Parus
+NA,NA,Poecile rufescens,1034,7410,Chestnut-backed Chickadee,Mésange à dos marron,Poecile rufescens,Passeriformes,Paridae,Poecile,rufescens,Parus
+NA,NA,Poecile hudsonicus,1035,7400,Boreal Chickadee,Mésange à tête brune,Poecile hudsonicus,Passeriformes,Paridae,Poecile,hudsonicus,Parus
+NA,NA,Thryophilus sinaloa,1082,16600,Sinaloa Wren,Troglodyte du Sinaloa,Thryophilus sinaloa,Passeriformes,Troglodytidae,Thryophilus,sinaloa,Thryothorus
+NA,NA,Ixoreus naevius,1160,7630,Varied Thrush,Grive à collier,Ixoreus naevius,Passeriformes,Turdidae,Ixoreus,naevius,NA
+NA,NA,Motacilla tschutschensis,1197,6960,Eastern Yellow Wagtail,Bergeronnette de Béringie,Motacilla tschutschensis,Passeriformes,Motacillidae,Motacilla,tschutschensis,NA
+NA,NA,Haemorhous mexicanus,1222,5190,House Finch,Roselin familier,Haemorhous mexicanus,Passeriformes,Fringillidae,Haemorhous,mexicanus,Carpodacus
+NA,NA,Haemorhous purpureus,1223,5170,Purple Finch,Roselin pourpré,Haemorhous purpureus,Passeriformes,Fringillidae,Haemorhous,purpureus,Carpodacus
+NA,NA,Haemorhous cassinii,1224,5180,Cassin's Finch,Roselin de Cassin,Haemorhous cassinii,Passeriformes,Fringillidae,Haemorhous,cassinii,Carpodacus
+NA,NA,Acanthis flammea,1229,5280,Common Redpoll,Sizerin flammé,Acanthis flammea,Passeriformes,Fringillidae,Acanthis,flammea,Carduelis
+NA,NA,Acanthis hornemanni,1230,5270,Hoary Redpoll,Sizerin blanchâtre,Acanthis hornemanni,Passeriformes,Fringillidae,Acanthis,hornemanni,Carduelis
+NA,NA,Spinus pinus,1233,5330,Pine Siskin,Tarin des pins,Spinus pinus,Passeriformes,Fringillidae,Spinus,pinus,Carduelis
+NA,NA,Spinus psaltria,1236,5300,Lesser Goldfinch,Chardonneret mineur,Spinus psaltria,Passeriformes,Fringillidae,Spinus,psaltria,Carduelis
+NA,NA,Spinus lawrencei,1237,5310,Lawrence's Goldfinch,Chardonneret gris,Spinus lawrencei,Passeriformes,Fringillidae,Spinus,lawrencei,Carduelis
+NA,NA,Spinus tristis,1238,5290,American Goldfinch,Chardonneret jaune,Spinus tristis,Passeriformes,Fringillidae,Spinus,tristis,Carduelis
+NA,NA,Vermivora cyanoptera x chrysoptera,1257,6412,Brewster's Warbler (Golden-winged x Blue-winged),Paruline de Brewster,Vermivora cyanoptera x chrysoptera,Passeriformes,Parulidae,Vermivora,cyanoptera x chrysoptera,NA
+NA,NA,Vermivora chrysoptera x cyanoptera,1258,6413,Lawrence's Warbler (Golden-winged x Blue-winged),Paruline de Lawrence,Vermivora chrysoptera x cyanoptera,Passeriformes,Parulidae,Vermivora,chrysoptera x cyanoptera,NA
+NA,NA,Oreothlypis peregrina,1263,6470,Tennessee Warbler,Paruline obscure,Oreothlypis peregrina,Passeriformes,Parulidae,Oreothlypis,peregrina,Vermivora
+NA,NA,Oreothlypis celata,1264,6460,Orange-crowned Warbler,Paruline verdâtre,Oreothlypis celata,Passeriformes,Parulidae,Oreothlypis,celata,Vermivora
+NA,NA,Oreothlypis luciae,1266,6430,Lucy's Warbler,Paruline de Lucy,Oreothlypis luciae,Passeriformes,Parulidae,Oreothlypis,luciae,Vermivora
+NA,NA,Oreothlypis ruficapilla,1267,6450,Nashville Warbler,Paruline à joues grises,Oreothlypis ruficapilla,Passeriformes,Parulidae,Oreothlypis,ruficapilla,Vermivora
+NA,NA,Oreothlypis virginiae,1268,6440,Virginia's Warbler,Paruline de Virginia,Oreothlypis virginiae,Passeriformes,Parulidae,Oreothlypis,virginiae,Vermivora
+NA,NA,Geothlypis tolmiei,1271,6800,MacGillivray's Warbler,Paruline des buissons,Geothlypis tolmiei,Passeriformes,Parulidae,Geothlypis,tolmiei,oporornis
+NA,NA,Geothlypis philadelphia,1272,6790,Mourning Warbler,Paruline triste,Geothlypis philadelphia,Passeriformes,Parulidae,Geothlypis,philadelphia,oporornis
+NA,NA,Geothlypis formosa,1273,6770,Kentucky Warbler,Paruline du Kentucky,Geothlypis formosa,Passeriformes,Parulidae,Geothlypis,formosa,oporornis
+NA,NA,Setophaga citrina,1279,6840,Hooded Warbler,Paruline à capuchon,Setophaga citrina,Passeriformes,Parulidae,Setophaga,citrina,Wilsonia
+NA,NA,Setophaga kirtlandii,1281,6700,Kirtland's Warbler,Paruline de Kirtland,Setophaga kirtlandii,Passeriformes,Parulidae,Setophaga,kirtlandii,Dendroica
+NA,NA,Setophaga tigrina,1282,6500,Cape May Warbler,Paruline tigrée,Setophaga tigrina,Passeriformes,Parulidae,Setophaga,tigrina,Dendroica
+NA,NA,Setophaga cerulea,1283,6580,Cerulean Warbler,Paruline azurée,Setophaga cerulea,Passeriformes,Parulidae,Setophaga,cerulea,Dendroica
+NA,NA,Setophaga americana,1284,6480,Northern Parula,Paruline à collier,Setophaga americana,Passeriformes,Parulidae,Setophaga,americana,Parula
+NA,NA,Setophaga pitiayumi,1285,6490,Tropical Parula,Paruline à joues noires,Setophaga pitiayumi,Passeriformes,Parulidae,Setophaga,pitiayumi,Parula
+NA,NA,Setophaga magnolia,1286,6570,Magnolia Warbler,Paruline à tête cendrée,Setophaga magnolia,Passeriformes,Parulidae,Setophaga,magnolia,Dendroica
+NA,NA,Setophaga castanea,1287,6600,Bay-breasted Warbler,Paruline à poitrine baie,Setophaga castanea,Passeriformes,Parulidae,Setophaga,castanea,Dendroica
+NA,NA,Setophaga fusca,1288,6620,Blackburnian Warbler,Paruline à gorge orangée,Setophaga fusca,Passeriformes,Parulidae,Setophaga,fusca,Dendroica
+NA,NA,Setophaga petechia,1289,6520,Yellow Warbler,Paruline jaune,Setophaga petechia,Passeriformes,Parulidae,Setophaga,petechia,Dendroica
+NA,NA,Setophaga pensylvanica,1290,6590,Chestnut-sided Warbler,Paruline à flancs marron,Setophaga pensylvanica,Passeriformes,Parulidae,Setophaga,pensylvanica,Dendroica
+NA,NA,Setophaga striata,1291,6610,Blackpoll Warbler,Paruline rayée,Setophaga striata,Passeriformes,Parulidae,Setophaga,striata,Dendroica
+NA,NA,Setophaga caerulescens,1292,6540,Black-throated Blue Warbler,Paruline bleue,Setophaga caerulescens,Passeriformes,Parulidae,Setophaga,caerulescens,Dendroica
+NA,NA,Setophaga palmarum,1293,6720,Palm Warbler,Paruline à couronne rousse,Setophaga palmarum,Passeriformes,Parulidae,Setophaga,palmarum,Dendroica
+NA,NA,Setophaga pinus,1294,6710,Pine Warbler,Paruline des pins,Setophaga pinus,Passeriformes,Parulidae,Setophaga,pinus,Dendroica
+NA,NA,Setophaga dominica,1298,6630,Yellow-throated Warbler,Paruline à gorge jaune,Setophaga dominica,Passeriformes,Parulidae,Setophaga,dominica,Dendroica
+NA,NA,Setophaga discolor,1299,6730,Prairie Warbler,Paruline des prés,Setophaga discolor,Passeriformes,Parulidae,Setophaga,discolor,Dendroica
+NA,NA,Setophaga graciae,1300,6640,Grace's Warbler,Paruline de Grace,Setophaga graciae,Passeriformes,Parulidae,Setophaga,graciae,Dendroica
+NA,NA,Setophaga nigrescens,1301,6650,Black-throated Gray Warbler,Paruline grise,Setophaga nigrescens,Passeriformes,Parulidae,Setophaga,nigrescens,Dendroica
+NA,NA,Setophaga townsendi,1302,6680,Townsend's Warbler,Paruline de Townsend,Setophaga townsendi,Passeriformes,Parulidae,Setophaga,townsendi,Dendroica
+NA,NA,Setophaga occidentalis,1303,6690,Hermit Warbler,Paruline à tête jaune,Setophaga occidentalis,Passeriformes,Parulidae,Setophaga,occidentalis,Dendroica
+NA,NA,Setophaga chrysoparia,1306,6660,Golden-cheeked Warbler,Paruline à dos noir,Setophaga chrysoparia,Passeriformes,Parulidae,Setophaga,chrysoparia,Dendroica
+NA,NA,Setophaga virens,1307,6670,Black-throated Green Warbler,Paruline à gorge noire,Setophaga virens,Passeriformes,Parulidae,Setophaga,virens,Dendroica
+NA,NA,Cardellina canadensis,1312,6860,Canada Warbler,Paruline du Canada,Cardellina canadensis,Passeriformes,Parulidae,Cardellina,canadensis,Wilsonia
+NA,NA,Cardellina pusilla,1313,6850,Wilson's Warbler,Paruline à calotte noire,Cardellina pusilla,Passeriformes,Parulidae,Cardellina,pusilla,Wilsonia
+NA,NA,Melozone fusca,1367,5910,Canyon Towhee,Tohi des canyons,Melozone fusca,Passeriformes,Emberizidae,Melozone,fusca,NA
+NA,NA,Spizelloides arborea,1380,5590,American Tree Sparrow,Bruant hudsonien,Spizelloides arborea,Passeriformes,Emberizidae,Spizelloides,arborea,Spizella
+NA,NA,Artemisiospiza nevadensis,1391,5738,Sagebrush Sparrow,Bruant des armoises,Artemisiospiza nevadensis,Passeriformes,Emberizidae,Artemisiospiza,nevadensis,NA
+NA,NA,Artemisiospiza belli,1392,5739,Bell's Sparrow,Bruant de Bell,Artemisiospiza belli,Passeriformes,Emberizidae,Artemisiospiza,belli,Amphispiza
