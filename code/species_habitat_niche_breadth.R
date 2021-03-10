@@ -3,19 +3,129 @@
 ### Libraries
 
 library(tidyverse)
+library(purrr)
+library(tmap)
+library(sf)
 
 ### Plotting theme
 
 theme_set(theme_classic())
 
-### read in ebird occurrence data and land cover data at breeding polygons 
+### Data directories
+bigdata <- "bigdata/"
+rawdata <- "raw_data/"
+derived_data <- "derived_data/"
+
+## BioArk directory
+info <- sessionInfo()
+bioark <- ifelse(grepl("apple", info$platform), "/Volumes", "\\\\BioArk")
+
+## species range maps directory
+range_dir <- paste0(bioark, "/hurlbertlab/GIS/birds/All/All/")
+
+### Species list 
+
+species_list <- read.csv(paste0(rawdata, "species_list.csv"), stringsAsFactors = F)
+
+# Match BBS taxonomy with breeding range polygon taxonomy
+fix_mismatch <- read.csv(paste0(derived_data, "fix_breedingrange_genus_mismatch.csv"), stringsAsFactors = F) %>%
+  dplyr::select(-file, -spp_name) %>%
+  filter(!is.na(old_genus)) %>%
+  mutate(new_binomial = paste(old_genus, species))
+
+bbs_spp <- species_list %>%
+  mutate(binomial = paste(genus, species, sep = " ")) %>%
+  filter(!grepl("unid.", english_common_name), !grepl("hybrid", english_common_name)) %>%
+  mutate_at(c("binomial"), ~case_when(grepl("Colaptes auratus", .) ~ "Colaptes auratus",
+                                      grepl("Junco hyemalis", .) ~ "Junco hyemalis",
+                                      grepl("Setophaga coronata", .) ~ "Dendroica coronata",
+                                      TRUE ~ .)) %>%
+  left_join(fix_mismatch) %>%
+  mutate(matched_name = ifelse(!is.na(old_genus), new_binomial, binomial),
+         matched_filename = gsub(" ", "_", matched_name)) %>%
+  filter(!is.na(matched_name))
+
+range_files <- data.frame(file = list.files(range_dir)) %>%
+  filter(grepl(".shp", file)) %>%
+  mutate(spp_name = word(file, 1, 2, sep = "_"),
+         file_binomial = gsub("_", " ", spp_name)) 
+
+# Match with eBird codes
+
+spp_list <- range_files %>%
+  right_join(bbs_spp, by = c("file_binomial" = "matched_name")) %>%
+  left_join(ebirdst::ebirdst_runs, by = c("english_common_name" = "common_name"))
+
+### Function: extract centroid from breeding range polygons
+
+range_centroid <- function(file) {
+  br <- read_sf(paste0(range_dir, file))
+  
+  # Use extant (PRESENCE 1-3) breeding and resident ranges (SEASONAL 1-2) only
+  # Re-project to land cover CRS
+  breeding_range <- br %>%
+    filter(PRESENCE %in% c(1:3), SEASONAL %in% c(1:2)) %>%
+    st_transform(4326)
+  
+  cent <- st_centroid(breeding_range)
+  
+  coords <- st_coordinates(cent)
+  
+  return(coords)
+}
+
+### read in ebird occurrence averaged by land cover type
 ### processed on longleaf HPC
 
-## Join occurrence probabilities with land cover at that site
+occ_lc <- data.frame(files = list.files(paste0(bigdata, "occ_lc"))) %>%
+  group_by(files) %>%
+  nest() %>%
+  mutate(spp = word(files, 1, sep = "_")) %>%
+  mutate(data = map(files, ~read_csv(paste0(bigdata, "occ_lc/", .)))) %>%
+  unnest(cols = c("data")) %>%
+  filter(!is.na(lc)) %>%
+  group_by(spp) %>%
+  mutate(nclass = n_distinct(lc))
 
-## For each species, average occurrence probability by land cover
+## Calculate SSI for each species
 
-## For each species, null expectation (average proportion land cover by class in breeding range polygon)
+ssi <- occ_lc %>%
+  group_by(spp) %>%
+  summarize(ssi = sd(meanOcc)/mean(meanOcc))
+
+## Map of SSI vs range centroid for each species
+
+# calculate species range centroids
+cents <- spp_list %>%
+  filter(!is.na(file)) %>%
+  mutate(centroid = map(file, ~range_centroid(.)))
+
+ssi_centroids <- cents %>%
+  mutate(x = map_dbl(centroid, ~{
+    c <- .
+    df <- data.frame(c)
+    
+    mean(df$X, na.rm = T)
+  }),
+  y = map_dbl(centroid, ~{
+    c <- .
+    df <- data.frame(c)
+    
+    mean(df$Y, na.rm = T)
+  })) %>%
+  dplyr::select(-centroid) %>%
+  left_join(ssi, by = c("species_code" = "spp")) %>%
+  filter(!is.na(ssi)) %>%
+  st_as_sf(coords = c("x", "y")) %>%
+  st_set_crs(4326)
+
+na_map <- read_sf(paste0(rawdata, "ne_50m_admin_1_states_provinces_lakes.shp")) %>%
+  filter(sr_adm0_a3 ==  "USA" | sr_adm0_a3 == "CAN") %>%
+  filter(iso_3166_2 != "US-HI")
+
+ssi_map <- tm_shape(na_map) + tm_polygons() +
+  tm_shape(ssi_centroids) + tm_dots(col = "ssi", palette = "YlGn", size = 0.4, title = "SSI - habitat")
+tmap_save(ssi_map, "figures/ssi_habitat_niche_map.pdf")
 
 #### Old code #####
 
