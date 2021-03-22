@@ -71,7 +71,9 @@ range_centroid <- function(file) {
   
   coords <- st_coordinates(cent)
   
-  return(coords)
+  br_size <- st_area(breeding_range)
+  
+  return(list(centroid = coords, size = br_size))
 }
 
 ### read in ebird occurrence averaged by land cover type
@@ -81,7 +83,7 @@ occ_lc <- data.frame(files = list.files(paste0(bigdata, "occ_lc"))) %>%
   group_by(files) %>%
   nest() %>%
   mutate(spp = word(files, 1, sep = "_")) %>%
-  mutate(data = map(files, ~read_csv(paste0(bigdata, "occ_lc/", .)))) %>%
+  mutate(data = purrr::map(files, ~read_csv(paste0(bigdata, "occ_lc/", .)))) %>%
   unnest(cols = c("data")) %>%
   filter(!is.na(lc)) %>%
   group_by(spp) %>%
@@ -98,20 +100,24 @@ ssi <- occ_lc %>%
 # calculate species range centroids
 cents <- spp_list %>%
   filter(!is.na(file)) %>%
-  mutate(centroid = map(file, ~range_centroid(.)))
+  mutate(centroid = purrr::map(file, ~range_centroid(.)))
 
 ssi_centroids <- cents %>%
   mutate(x = map_dbl(centroid, ~{
-    c <- .
+    c <- .$centroid
     df <- data.frame(c)
     
     mean(df$X, na.rm = T)
   }),
   y = map_dbl(centroid, ~{
-    c <- .
+    c <- .$centroid
     df <- data.frame(c)
     
     mean(df$Y, na.rm = T)
+  }),
+  range_size = map_dbl(centroid, ~{
+    s <- sum(.$size)
+    as.numeric(log10(s/1000000))
   })) %>%
   dplyr::select(-centroid) %>%
   left_join(ssi, by = c("species_code" = "spp")) %>%
@@ -124,8 +130,96 @@ na_map <- read_sf(paste0(rawdata, "ne_50m_admin_1_states_provinces_lakes.shp")) 
   filter(iso_3166_2 != "US-HI")
 
 ssi_map <- tm_shape(na_map) + tm_polygons() +
-  tm_shape(ssi_centroids) + tm_dots(col = "ssi", palette = "YlGn", size = 0.4, title = "SSI - habitat")
+  tm_shape(ssi_centroids) + tm_dots(col = "ssi", palette = "YlGn",
+                                    size = "range_size", title = "SSI - habitat") +
+  tm_layout(scale = 1)
 tmap_save(ssi_map, "figures/ssi_habitat_niche_map.pdf")
+
+## SSI sensitivity analyses
+
+# How is SSI related to # of zero categories in actual data?
+
+num_zeros <- occ_lc %>%
+  group_by(spp) %>%
+  summarize(n_zero = n_distinct(lc[meanOcc == 0])) %>%
+  left_join(ssi)
+
+ggplot(num_zeros, aes(x = n_zero, y = ssi)) + geom_point() + 
+  labs(x = "Number 0 land cover classes", y = "Habitat SSI")
+ggsave("figures/ssi_vs_zeros_empirical.pdf")
+
+# Cartoon species
+# Occupancy of 2-12 classes/20, other classes are constant occ
+
+fake_spp <- c(1:6) # spp
+
+lc <- c(1:20) # land cover classes
+
+occ <- runif(1) # constant occupancy
+
+occ_constant <- purrr::map_dfr(fake_spp, ~{
+  s <- .
+  
+  n_zero <- 2*s # number of zero occupancy classes
+  
+  occ_lc <- data.frame(spp = s, zero = n_zero, landcover = lc, occup = c(rep(0, n_zero), rep(occ, 20 - n_zero)))
+  
+}) %>%
+  group_by(spp) %>%
+  summarize(zero = unique(zero),
+            ssi = sd(occup)/mean(occup))
+
+ggplot(occ_constant, aes(x = zero, y = ssi)) + geom_line() + 
+  labs(x = "Land cover classes = 0", y = "SSI")
+ggsave("figures/ssi_sim_constant_occ.pdf")
+
+# Fixed number of zero classes, vary commonness/rarity
+
+n_zero <- 4 # fixed number of zero occupancy classes
+
+occ_common_rare <- purrr::map_dfr(fake_spp, ~{
+  s <- .
+  
+  occ <- 0.1*s
+  
+  occ_lc <- data.frame(spp = s, landcover = lc, 
+                       occup = c(rep(0, n_zero), rep(occ, 20 - n_zero)))
+  
+}) %>%
+  group_by(spp) %>%
+  summarize(occ = max(occup),
+            ssi = sd(occup)/mean(occup))
+
+ggplot(occ_common_rare, aes(x = occ, y = ssi)) + geom_line() + 
+  labs(x = "Occupancy", y = "SSI")
+ggsave("figures/ssi_sim_common_rare.pdf")
+
+# For a given # of 0 LC classes, varying evenness among other classes
+
+fake_spp <- c(0:8) # spp
+
+low_occ <- 0.1 # unpreferred habitat
+
+hi_occ <- 0.8 # preferred habitat
+
+n_zero <- 4 # fixed number of zero occupancy classes
+
+occ_variable <- purrr::map_dfr(fake_spp, ~{
+    s <- .
+  
+    n_pref <- 2*s # number preferred habitats
+  
+    occ_lc <- data.frame(spp = s, landcover = lc, 
+                       occup = c(rep(0, n_zero), rep(hi_occ, n_pref), rep(low_occ, 20 - n_zero - n_pref)))
+  
+  }) %>%
+  group_by(spp) %>%
+  summarize(occ = unique(spp)*2/16,
+            ssi = sd(occup)/mean(occup))
+
+ggplot(occ_variable, aes(x = occ, y = ssi)) + geom_line() +
+  labs(x = "Proportion preferred habitats", y = "SSI")
+ggsave("figures/ssi_sim_variable_occ.pdf")
 
 #### Old code #####
 
