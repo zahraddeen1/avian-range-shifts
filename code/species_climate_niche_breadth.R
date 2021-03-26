@@ -50,7 +50,7 @@ spp_list <- range_files %>%
 
 # WorldClim
 climatelayers <- getData('worldclim', var='bio', res=10, path=tempdir())
-climatelayers_ss = climatelayers[[c(4, 5, 6, 13, 14)]]
+climatelayers_ss = climatelayers[[c(5, 10, 18)]]
 
 # WorldClim crs
 bio_crs <- st_crs(climatelayers)
@@ -93,17 +93,37 @@ climate_hypervolume <- function(species) {
   ## Extract clim vars
   br_clim <- extract(climatelayers_ss_cropped, br_df)
   
-  ## Calculate hypervolume
-  br_hyper <- hypervolume_gaussian(br_nona)
-  vol <- get_volume(br_hyper)
+  br_nona <- na.omit(br_clim)
   
-  print(paste(Sys.time(), species, "complete"))
+  if(nrow(br_nona) == 0) {
+    return(NA) # Breeding range not in North America
+  } else {
+    ## Calculate hypervolume
+    br_hyper <- hypervolume_gaussian(br_nona)
+    vol <- get_volume(br_hyper)
+    
+    print(paste(Sys.time(), species, "complete"))
+    
+    return(vol)
+  }
   
-  return(vol)
+
 }
 
 ## Calculate climate hypervolume based on each species range map
+
 spp_hypervol <- spp_list %>%
   filter(!is.na(file)) %>%
-  mutate(climate_vol = map_dbl(file, ~climate_hypervolume(.)))
-## Need to use diff bioclim - most seasonal places are getting high scores.
+  filter(file != "Alauda_arvensis_22717415.shp", file != "Phylloscopus_borealis_22715316.shp") %>%
+  mutate(climate_vol = map_dbl(file, ~climate_hypervolume(.))) %>%
+  dplyr::select(file, spp_name, file_binomial, aou, english_common_name, family, genus, species, binomial, old_genus, 
+                new_binomial, matched_filename, species_code, climate_vol)
+  
+write.csv(spp_hypervol,
+            paste0(output_dir, "climate_niche_breadth.csv"),
+            row.names = F)
+
+
+
+
+
