@@ -95,6 +95,8 @@ ssi <- occ_lc %>%
   group_by(spp) %>%
   summarize(ssi = sd(meanOcc)/mean(meanOcc))
 
+#### SSI sensitivity analyses ####
+
 ## Map of SSI vs range centroid for each species
 
 # calculate species range centroids
@@ -205,14 +207,14 @@ hi_occ <- 0.8 # preferred habitat
 n_zero <- 4 # fixed number of zero occupancy classes
 
 occ_variable <- purrr::map_dfr(fake_spp, ~{
-    s <- .
+  s <- .
   
-    n_pref <- 2*s # number preferred habitats
+  n_pref <- 2*s # number preferred habitats
   
-    occ_lc <- data.frame(spp = s, landcover = lc, 
+  occ_lc <- data.frame(spp = s, landcover = lc, 
                        occup = c(rep(0, n_zero), rep(hi_occ, n_pref), rep(low_occ, 20 - n_zero - n_pref)))
   
-  }) %>%
+}) %>%
   group_by(spp) %>%
   summarize(occ = unique(spp)*2/16,
             ssi = sd(occup)/mean(occup))
@@ -220,6 +222,56 @@ occ_variable <- purrr::map_dfr(fake_spp, ~{
 ggplot(occ_variable, aes(x = occ, y = ssi)) + geom_line() +
   labs(x = "Proportion preferred habitats", y = "SSI")
 ggsave("figures/ssi_sim_variable_occ.pdf")
+
+#### SSI with only LC classes that occur in species breeding ranges ####
+
+breedrange_lc <- data.frame(files = list.files(paste0(bigdata, "breedrange_landcover"))) %>%
+  group_by(files) %>%
+  nest() %>%
+  mutate(spp = word(files, 1, 2, sep = "_")) %>%
+  mutate(data = purrr::map(files, ~read_csv(paste0(bigdata, "breedrange_landcover/", .)))) %>%
+  unnest(cols = c("data")) 
+
+spp_lc_nonzero <- breedrange_lc %>%
+  group_by(spp) %>%
+  filter(x > 0) %>%
+  nest(br_lc = c(files, Group.1, x)) %>%
+  left_join(spp_list, by = c("spp" = "matched_filename")) %>%
+  rename(matched_filename = "spp")
+
+ssi_nozero <- occ_lc %>%
+  group_by(spp) %>%
+  nest() %>%
+  left_join(spp_lc_nonzero, by = c("spp" = "species_code")) %>%
+  select(spp, matched_filename, aou, english_common_name, data, br_lc) %>%
+  mutate(ssi = map2_dbl(data, br_lc, ~{
+    occ_df <- .x
+    
+    br <- .y
+    
+    occ_subs <- occ_df %>%
+      filter(lc %in% br$Group.1) %>%
+      filter(lc > 0)
+    
+    sd(occ_subs$meanOcc)/mean(occ_subs$meanOcc)}),
+    n_zero = map2_dbl(data, br_lc, ~{
+      occ_df <- .x
+      
+      br <- .y
+      
+      occ_subs <- occ_df %>%
+        filter(lc %in% br$Group.1) %>%
+        filter(lc > 0)
+      
+      sum(occ_subs$meanOcc == 0)}))
+
+ssi_write <- ssi_nozero %>%
+  select(-data, -br_lc)
+write.csv(ssi_write, paste0(derived_data, "habitat_niche_ssi_true_zeroes.csv"), row.names = F)
+
+ggplot(ssi_nozero, aes(x = n_zero, y = ssi)) + geom_point() +
+  labs(x = "Number true 0 occ land cover classes", y = "SSI")
+ggsave("ssi_vs_true_zeroes.pdf")
 
 #### Old code #####
 
