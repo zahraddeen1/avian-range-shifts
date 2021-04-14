@@ -29,6 +29,7 @@ output_dir <- "/proj/hurlbertlab/gdicecco/ch3_hab_niche/breedrange_landcover/"
 
 ### Breeding range species list
 
+
 # Match BBS taxonomy with breeding range polygon taxonomy
 fix_mismatch <- read.csv("fix_breedingrange_genus_mismatch.csv", stringsAsFactors = F) %>%
   dplyr::select(-file, -spp_name) %>%
@@ -41,6 +42,10 @@ bbs_spp <- read.csv("species_list.csv", stringsAsFactors = F) %>%
   mutate_at(c("binomial"), ~case_when(grepl("Colaptes auratus", .) ~ "Colaptes auratus",
                                       grepl("Junco hyemalis", .) ~ "Junco hyemalis",
                                       grepl("Setophaga coronata", .) ~ "Dendroica coronata",
+                                      grepl("Picoides dorsalis", .) ~ "Picoides tridactylus",
+                                      grepl("Pica hudsonia", .) ~ "Pica pica",
+                                      grepl("Melozone fusca", .) ~ "Melozone fuscus",
+                                      grepl("Geothlypis formosa", .) ~ "Oporornis formosus",
                                       TRUE ~ .)) %>%
   left_join(fix_mismatch) %>%
   mutate(matched_name = ifelse(!is.na(old_genus), new_binomial, binomial),

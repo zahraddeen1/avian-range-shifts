@@ -39,6 +39,10 @@ bbs_spp <- species_list %>%
   mutate_at(c("binomial"), ~case_when(grepl("Colaptes auratus", .) ~ "Colaptes auratus",
                                       grepl("Junco hyemalis", .) ~ "Junco hyemalis",
                                       grepl("Setophaga coronata", .) ~ "Dendroica coronata",
+                                      grepl("Picoides dorsalis", .) ~ "Picoides tridactylus",
+                                      grepl("Pica hudsonia", .) ~ "Pica pica",
+                                      grepl("Melozone fusca", .) ~ "Melozone fuscus",
+                                      grepl("Geothlypis formosa", .) ~ "Oporornis formosus",
                                       TRUE ~ .)) %>%
   left_join(fix_mismatch) %>%
   mutate(matched_name = ifelse(!is.na(old_genus), new_binomial, binomial),

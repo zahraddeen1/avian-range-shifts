@@ -1,5 +1,5 @@
 file,spp_name,binomial,species_id,aou,english_common_name,french_common_name,spanish_common_name,sporder,family,genus,species,old_genus
-NA,NA,Streptopelia chinensis,141,3151,Spotted Dove,Tourterelle tigrine,Streptopelia chinensis,Columbiformes,Columbidae,Streptopelia,chinensis,NA
+NA,NA,Streptopelia chinensis,141,3151,Spotted Dove,Tourterelle tigrine,Streptopelia chinensis,Columbiformes,Columbidae,Streptopelia,chinensis,Spilopelia
 NA,NA,Picoides scalaris,741,3960,Ladder-backed Woodpecker,Pic arlequin,Picoides scalaris,Piciformes,Picidae,Picoides,scalaris,Dryobates
 NA,NA,Picoides nuttallii,742,3970,Nuttall's Woodpecker,Pic de Nuttall,Picoides nuttallii,Piciformes,Picidae,Picoides,nuttallii,Dryobates
 NA,NA,Picoides pubescens,743,3940,Downy Woodpecker,Pic mineur,Picoides pubescens,Piciformes,Picidae,Picoides,pubescens,Dryobates
@@ -36,9 +36,9 @@ NA,NA,Oreothlypis celata,1264,6460,Orange-crowned Warbler,Paruline verdâtre,Oreo
 NA,NA,Oreothlypis luciae,1266,6430,Lucy's Warbler,Paruline de Lucy,Oreothlypis luciae,Passeriformes,Parulidae,Oreothlypis,luciae,Vermivora
 NA,NA,Oreothlypis ruficapilla,1267,6450,Nashville Warbler,Paruline à joues grises,Oreothlypis ruficapilla,Passeriformes,Parulidae,Oreothlypis,ruficapilla,Vermivora
 NA,NA,Oreothlypis virginiae,1268,6440,Virginia's Warbler,Paruline de Virginia,Oreothlypis virginiae,Passeriformes,Parulidae,Oreothlypis,virginiae,Vermivora
-NA,NA,Geothlypis tolmiei,1271,6800,MacGillivray's Warbler,Paruline des buissons,Geothlypis tolmiei,Passeriformes,Parulidae,Geothlypis,tolmiei,oporornis
-NA,NA,Geothlypis philadelphia,1272,6790,Mourning Warbler,Paruline triste,Geothlypis philadelphia,Passeriformes,Parulidae,Geothlypis,philadelphia,oporornis
-NA,NA,Geothlypis formosa,1273,6770,Kentucky Warbler,Paruline du Kentucky,Geothlypis formosa,Passeriformes,Parulidae,Geothlypis,formosa,oporornis
+NA,NA,Geothlypis tolmiei,1271,6800,MacGillivray's Warbler,Paruline des buissons,Geothlypis tolmiei,Passeriformes,Parulidae,Geothlypis,tolmiei,Oporornis
+NA,NA,Geothlypis philadelphia,1272,6790,Mourning Warbler,Paruline triste,Geothlypis philadelphia,Passeriformes,Parulidae,Geothlypis,philadelphia,Oporornis
+NA,NA,Geothlypis formosa,1273,6770,Kentucky Warbler,Paruline du Kentucky,Geothlypis formosa,Passeriformes,Parulidae,Geothlypis,formosa,Oporornis
 NA,NA,Setophaga citrina,1279,6840,Hooded Warbler,Paruline à capuchon,Setophaga citrina,Passeriformes,Parulidae,Setophaga,citrina,Wilsonia
 NA,NA,Setophaga kirtlandii,1281,6700,Kirtland's Warbler,Paruline de Kirtland,Setophaga kirtlandii,Passeriformes,Parulidae,Setophaga,kirtlandii,Dendroica
 NA,NA,Setophaga tigrina,1282,6500,Cape May Warbler,Paruline tigrée,Setophaga tigrina,Passeriformes,Parulidae,Setophaga,tigrina,Dendroica
