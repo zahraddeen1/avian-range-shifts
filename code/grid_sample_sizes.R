@@ -7,6 +7,7 @@ library(tmap)
 library(raster)
 
 biodrive <- "\\\\ad.unc.edu\\bio\\HurlbertLab\\"
+biodrive <- "/Volumes/bio/HurlbertLab/"
 
 ## BBS route data
 
@@ -30,6 +31,26 @@ na_map <- read_sf("raw_data/ne_50m_admin_1_states_provinces_lakes.shp") %>%
 time_windows <- data.frame(start = c(1970:1980)) %>%
   mutate(end = start + 4)
 
+## For routes spatial points, rasterize and plot on N. Am map for a given threshold of routes per cel
+## pts = min routes per cell, sp_df = routes spatial points
+routes_map <- function(min_rte, sp_df){
+  df <- sp_df %>%
+    filter(n_routes >= min_rte)
+  
+  pts <- as(df, "Spatial")
+  
+  # Generate empty raster layer and rasterize points
+  routes_raster <- raster(crs = crs(pts), vals = 0, resolution = c(1,1), ext = extent(c(-180, 180, -90, 90))) %>%
+    rasterize(pts, .)
+  
+  plot1 <- tm_shape(na_map) + tm_polygons() + 
+    tm_shape(routes_raster) + tm_raster("n_routes", palette = "YlGnBu", alpha = 0.8, breaks = c(seq(1,20, by = 2)), title = "Routes") +
+    tm_layout(legend.position = c("left", "bottom"), title = paste0("Min routes/cell = ", min_rte))
+  
+  return(plot1)
+}
+
+
 ## Fun: for starting year and ending year, filter BBS routes, snap to grid, plot sampled grid cells for min 1-4 routes per cell
 
 grid_plots <- function(start_year, end_year){
@@ -42,17 +63,27 @@ grid_plots <- function(start_year, end_year){
     st_as_sf(coords = c("lon_cell", "lat_cell")) %>%
     st_set_crs(4326)
   
-  pts <- as(routes_subs, "Spatial")
+  # Generate rasters for thresholds from 1-4
+  min1 <- routes_map(1, routes_subs) + tm_layout(main.title = paste0("Start ", start_year, ", End ", end_year))
+  min2 <- routes_map(2, routes_subs)
+  min3 <- routes_map(3, routes_subs)
+  min4 <- routes_map(4, routes_subs)
   
-  # Generate empty raster layer and rasterize points
- routes_raster <- raster(crs = crs(pts), vals = 0, resolution = c(1,1), ext = extent(c(-180, 180, -90, 90))) %>%
-    rasterize(pts, .)
-  
-  min1 <- tm_shape(na_map) + tm_polygons() + 
-    tm_shape(routes_raster) + tm_raster("n_routes", palette = "YlGnBu", alpha = 0.8, breaks = c(seq(1,20, by = 2)), title = "Routes") +
-    tm_layout(legend.position = c("left", "bottom"), title = "Min routes/cell = 1")
-  
-  # Generate rasters for 2-4 thresholds programmatically
+  four_panel <- tmap_arrange(min1, min2, min3, min4, nrow = 2)
 
+  return(four_panel)
 }
+
+## Make plots for 1970s:
+
+pdf(paste0(getwd(), "/figures/grid_cell_maps.pdf"), height = 8, width = 10)
+for(i in 1:11) {
+  s <- time_windows[i, 1]
+  e <- time_windows[i, 2]
+  
+  p <- grid_plots(s, e)
+  
+  print(p)
+}
+dev.off()
 
