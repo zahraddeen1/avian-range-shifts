@@ -6,8 +6,11 @@ library(sf)
 library(tmap)
 library(raster)
 
-biodrive <- "\\\\ad.unc.edu\\bio\\HurlbertLab\\"
-biodrive <- "/Volumes/bio/HurlbertLab/"
+## Bio drive paths
+
+info <- Sys.info()
+
+biodrive <- ifelse(info[["sysname"]] == "Windows", "\\\\ad.unc.edu\\bio\\HurlbertLab\\", "/Volumes/bio/HurlbertLab/")
 
 ## BBS route data
 
@@ -44,7 +47,7 @@ routes_map <- function(min_rte, sp_df){
     rasterize(pts, .)
   
   plot1 <- tm_shape(na_map) + tm_polygons() + 
-    tm_shape(routes_raster) + tm_raster("n_routes", palette = "YlGnBu", alpha = 0.8, breaks = c(seq(1,20, by = 2)), title = "Routes") +
+    tm_shape(routes_raster) + tm_raster("n_bins", palette = "YlGnBu", alpha = 0.8, breaks = c(seq(1,12, by = 2)), title = "Routes") +
     tm_layout(legend.position = c("left", "bottom"), title = paste0("Min routes/cell = ", min_rte))
   
   return(plot1)
@@ -54,12 +57,16 @@ routes_map <- function(min_rte, sp_df){
 ## Fun: for starting year and ending year, filter BBS routes, snap to grid, plot sampled grid cells for min 1-4 routes per cell
 
 grid_plots <- function(start_year, end_year){
+  
   routes_subs <- RT1.routes %>%
+    mutate(yr_bin = 5*floor(year/5)) %>%
+    group_by(stateroute) %>%
+    mutate(n_bins = n_distinct(yr_bin)) %>%
     filter(year >= start_year, year <= end_year) %>%
     mutate(lat_cell = round(latitude),
            lon_cell = round(longitude)) %>%
     group_by(lat_cell, lon_cell) %>%
-    summarize(n_routes = n_distinct(stateroute)) %>%
+    summarize(n_routes = n_distinct(stateroute), n_bins = max(n_bins)) %>%
     st_as_sf(coords = c("lon_cell", "lat_cell")) %>%
     st_set_crs(4326)
   
