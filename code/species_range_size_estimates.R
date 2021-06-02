@@ -46,26 +46,33 @@ na_map <- read_sf("raw_data/ne_50m_admin_1_states_provinces_lakes.shp") %>%
 
 # BBS route raster: start 1976, one route per cell
 
-# 389 cells
+# 383 cells
 routes_subs <- RT1.routes %>%
   mutate(yr_bin = 5*floor(year/5)) %>%
   group_by(stateroute) %>%
   mutate(n_bins = n_distinct(yr_bin)) %>%
+  group_by(stateroute, yr_bin) %>%
+  mutate(n_surveys = n_distinct(year)) %>%
   filter(year >= 1976) %>%
   mutate(lat_cell = round(latitude),
          lon_cell = round(longitude),
          cell_id = paste0(lon_cell, ",", lat_cell)) %>%
   group_by(lat_cell, lon_cell, cell_id) %>%
-  summarize(n_routes = n_distinct(stateroute), n_bins = max(n_bins)) %>%
+  summarize(n_routes = n_distinct(stateroute), n_bins = max(n_bins), 
+            early_yrs = max(n_surveys[yr_bin == 1975]), late_yrs = max(n_surveys[yr_bin == 2010])) %>%
   st_as_sf(coords = c("lon_cell", "lat_cell")) %>%
   st_set_crs(4326) %>%
-  filter(n_bins == max(n_bins))
+  filter(n_bins == max(n_bins), early_yrs >= 2, late_yrs >= 2)
 
 pts <- as(dplyr::select(routes_subs, -cell_id), "Spatial")
 
 # Generate empty raster layer and rasterize points
 empty_raster <- raster(crs = crs(pts), vals = 0, resolution = c(1,1), ext = extent(c(-180, 180, -90, 90)))
 routes_raster <-  rasterize(pts, empty_raster)
+
+# BBS routes area
+
+bbs_convex <- concaveman(routes_subs, concavity = "Infinity")
 
 ## Species range map overlap with BBS route extent
 
@@ -80,28 +87,24 @@ spp_overlap <- spp_list %>%
     breeding_range <- br %>%
       filter(PRESENCE %in% c(1:3), SEASONAL %in% c(1:2))
     
-    br <- as(breeding_range, "Spatial")
+    range_size <- sum(st_area(br))
     
-    range_raster <- raster(crs = crs(br), vals = 0, resolution = c(1,1), ext = extent(c(-180, 180, -90, 90))) %>%
-      rasterize(br, .)
+    overlap <- st_intersection(br, bbs_convex)
     
-    range_size <- sum(range_raster@data@values, na.rm = T)
+    overlap_area <- sum(st_area(overlap))
     
-    overlap <- mask(range_raster, routes_raster)
+    range_overlap <- overlap_area/range_size
     
-    range_overlap <- sum(overlap@data@values[, 1], na.rm = T)
-    
-    range_missing <- range_size - range_overlap
-    
-    data.frame(overlap = range_overlap, range_excl = range_missing/range_size)
+    data.frame(overlap = range_overlap)
     
   })) %>%
   unnest(cols = c("range_overlap"))
 # write.csv(dplyr::select(spp_overlap, -climate_vol), "derived_data/spp_bbs_range_overlap.csv", row.names = F)
 
-# 110 spp with > 20% range in BBS
+# 229 spp with at least 50% range in BBS convex hull
 spp <- spp_overlap %>%
-  filter(range_excl <= 0.8)
+  mutate_at(c("overlap"), ~as.numeric(.)) %>%
+  filter(overlap > 0.5)
 
 ## Range area and range occupancy changes
 ## Sample 1 route per grid cell, 500x
@@ -134,6 +137,7 @@ range_samp <- data.frame(sim = c(1:499)) %>%
              lon_cell = round(longitude),
              cell_id = paste0(lon_cell, ",", lat_cell)) %>%
       filter(cell_id %in% sample_routes$cell_id) %>%
+      # Add filter for 2 presences here
       group_by(aou) %>%
       nest() %>%
       mutate(metrics = purrr::map(data, ~{
@@ -182,7 +186,7 @@ range_samp <- data.frame(sim = c(1:499)) %>%
     spp_change <- spp_counts_t1 %>%
       left_join(spp_counts_t2, by = c("aou"), suffix = c("_t1", "_t2")) %>%
       left_join(spp_overlap, by = c("aou")) %>%
-      mutate(delta_area = (area_t2 - area_t1)/1000000,
+      mutate(delta_area = (area_t2 - area_t1)/area_t1,
              delta_occ = (total_cells_t2 - total_cells_t1)/overlap)
     
     spp_change
@@ -272,11 +276,6 @@ for(s in spp$aou) {
   routes_raster_t2 <- raster(crs = crs(pts_t2), vals = 0, resolution = c(1,1), ext = extent(c(-180, 180, -90, 90))) %>%
     rasterize(pts_t2, .)
   
-    # Spp convex hull
-    
-    convex <- concaveman(spp_routes_t1, concavity = "Infinity")
-    convex2 <- concaveman(spp_routes_t2, concavity = "Infinity")
-    
     # Spp concave hull
     
     concave <- concaveman(spp_routes_t1, concavity = 2)
@@ -285,13 +284,13 @@ for(s in spp$aou) {
     range_pol_1 <- tm_shape(na_map) + tm_polygons() + tm_shape(breeding_range) + tm_polygons(col = "skyblue") + 
       tm_shape(routes_raster_t1) + tm_raster(col = "n_bins", legend.show = F, palette = "Reds") + tm_layout(title = name)
     
-    range_hulls_1 <- tm_shape(na_map) + tm_polygons() + tm_shape(convex) + tm_polygons(col = "skyblue", alpha = 0.5) + 
+    range_hulls_1 <- tm_shape(na_map) + tm_polygons() + 
       tm_shape(concave) + tm_polygons(col = "skyblue4", alpha = 0.5)
     
     range_pol_2 <- tm_shape(na_map) + tm_polygons() + tm_shape(breeding_range) + tm_polygons(col = "skyblue") + 
       tm_shape(routes_raster_t2) + tm_raster(col = "n_bins", legend.show = F, palette = "Reds") + tm_layout(title = paste0("change area = ", round(d_area), "\nchange occ = ", round(d_occ, 2)))
     
-    range_hulls_2 <- tm_shape(na_map) + tm_polygons() + tm_shape(convex2) + tm_polygons(col = "skyblue", alpha = 0.5) + 
+    range_hulls_2 <- tm_shape(na_map) + tm_polygons() + 
       tm_shape(concave2) + tm_polygons(col = "skyblue4", alpha = 0.5)
     
     range_maps <- tmap_arrange(range_pol_1, range_hulls_1, range_pol_2, range_hulls_2, nrow =2)
