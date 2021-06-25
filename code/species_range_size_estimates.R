@@ -152,7 +152,7 @@ concave_area <- function(aou, df) {
     mutate(polygonID = row.names(.))
   
   # does concave area have at least 2 BBS routes in it?
-  routes_sf <- sample_routes %>%
+  routes_sf <- routes %>%
     st_as_sf(coords = c("longitude", "latitude")) %>%
     st_set_crs(4326) %>%
     filter(stateroute %in% df$stateroute) %>%
@@ -187,86 +187,111 @@ concave_area <- function(aou, df) {
              area = sum(st_area(concave_all))))
 }
 
-possibly_concave_area <- possibly(concave_area, NA)
+possibly_concave_area <- possibly(concave_area, data.frame(max_lat = NA,
+                                                           max_lon = NA,
+                                                           min_lat = NA,
+                                                           min_lon = NA,
+                                                           total_cells = NA,
+                                                           area = NA))
 
 ## Range area and range occupancy changes
 ## Sample 1 route per grid cell, 500x
 ## For each species+time window, calculate # grid cells occuppied, max and min lat & lon, range occ (occ cells/cells in polygon)
 
-range_samp <- data.frame(sim = c(1:499)) %>%
-  group_by(sim) %>%
-  nest() %>%
-  mutate(range_metrics = purrr::map(sim, ~{
-    
-    all_routes <- RT1.routes %>%
-      mutate(yr_bin = 5*floor(year/5)) %>%
-      group_by(stateroute) %>%
-      mutate(n_bins = n_distinct(yr_bin)) %>%
-      group_by(stateroute, yr_bin) %>%
-      mutate(n_surveys = n_distinct(year)) %>%
-      filter(year >= 1976) %>%
-      mutate(lat_cell = round(latitude),
-             lon_cell = round(longitude),
-             cell_id = paste0(lon_cell, ",", lat_cell)) %>%
-      group_by(cell_id) %>%
-      mutate(early_yrs = max(n_surveys[yr_bin == 1975]), 
-             late_yrs = max(n_surveys[yr_bin == 2010])) %>%
-      filter(cell_id %in% routes_subs$cell_id, n_bins == 11, early_yrs >= 2, late_yrs >= 2) %>%
-      distinct(stateroute, latitude, longitude, bcr, n_bins, lat_cell, lon_cell, cell_id)
-    
-    sample_routes <- all_routes %>%
-      group_by(cell_id) %>%
-      sample_n(1)
-    
-    # Spp BBS occurrences - must be present at a route >= 2/5 times to count as a presence
-    spp_counts_t1 <- counts_subs %>%
-      filter(year >= 1976, year < 1981, aou %in% spp$aou) %>%
-      mutate(lat_cell = round(latitude),
-             lon_cell = round(longitude),
-             cell_id = paste0(lon_cell, ",", lat_cell)) %>%
-      filter(cell_id %in% sample_routes$cell_id) %>%
-      group_by(aou, cell_id, stateroute) %>%
-      mutate(n_years = n_distinct(year)) %>%
-      filter(n_years >= 2) %>%
-      group_by(aou) %>%
-      mutate(n_cells = n_distinct(cell_id)) %>%
-      filter(n_cells >= 4) %>%
-      nest() %>%
-      mutate(metrics = purrr::map2(aou, data, ~possibly_concave_area(.x, .y))) %>%
-      dplyr::select(-data) %>%
-      unnest(cols = c("metrics"))
-    
-    
-    spp_counts_t2 <- counts_subs %>%
-      filter(year >= 2013, year <= 2017, aou %in% spp$aou) %>%
-      mutate(lat_cell = round(latitude),
-             lon_cell = round(longitude),
-             cell_id = paste0(lon_cell, ",", lat_cell)) %>%
-      filter(cell_id %in% sample_routes$cell_id) %>%
-      group_by(aou, cell_id, stateroute) %>%
-      mutate(n_years = n_distinct(year)) %>%
-      filter(n_years >= 2) %>%
-      group_by(aou) %>%
-      mutate(n_cells = n_distinct(cell_id)) %>%
-      filter(n_cells >= 4) %>%
-      nest() %>%
-      mutate(metrics = purrr::map2(aou, data, ~possibly_concave_area(.x, .y))) %>%
-      dplyr::select(-data) %>%
-      unnest(cols = c("metrics"))
-    
-    spp_change <- spp_counts_t1 %>%
-      left_join(spp_counts_t2, by = c("aou"), suffix = c("_t1", "_t2")) %>%
-      left_join(spp_overlap, by = c("aou")) %>%
-      mutate(delta_area = (area_t2 - area_t1)/area_t1,
-             delta_occ = (total_cells_t2 - total_cells_t1)/overlap_cells)
-    
-    spp_change
-  }))
+range_samp <- vector("list", 500)
 
-range_metrics <- range_samp %>%
-  dplyr::select(-data) %>%
-  unnest(cols = c("range_metrics"))
-# write.csv(range_metrics, "derived_data/range_metrics_sampled.csv", row.names = F)
+Sys.time()
+
+for(i in 14:length(range_samp)) {
+  
+  all_routes <- RT1.routes %>%
+    mutate(yr_bin = 5*floor(year/5)) %>%
+    group_by(stateroute) %>%
+    mutate(n_bins = n_distinct(yr_bin)) %>%
+    group_by(stateroute, yr_bin) %>%
+    mutate(n_surveys = n_distinct(year)) %>%
+    filter(year >= 1976) %>%
+    mutate(lat_cell = round(latitude),
+           lon_cell = round(longitude),
+           cell_id = paste0(lon_cell, ",", lat_cell)) %>%
+    group_by(cell_id) %>%
+    mutate(early_yrs = max(n_surveys[yr_bin == 1975]), 
+           late_yrs = max(n_surveys[yr_bin == 2010])) %>%
+    filter(cell_id %in% routes_subs$cell_id, n_bins == 11, early_yrs >= 2, late_yrs >= 2) %>%
+    distinct(stateroute, latitude, longitude, bcr, n_bins, lat_cell, lon_cell, cell_id)
+  
+  sample_routes <- all_routes %>%
+    group_by(cell_id) %>%
+    sample_n(1)
+  
+  # Spp BBS occurrences - must be present at a route >= 2/5 times to count as a presence
+  spp_counts_t1 <- counts_subs %>%
+    filter(year >= 1976, year < 1981, aou %in% spp$aou) %>%
+    mutate(lat_cell = round(latitude),
+           lon_cell = round(longitude),
+           cell_id = paste0(lon_cell, ",", lat_cell)) %>%
+    filter(stateroute %in% sample_routes$stateroute) %>%
+    filter(cell_id %in% sample_routes$cell_id) %>%
+    group_by(aou, cell_id, stateroute) %>%
+    mutate(n_years = n_distinct(year)) %>%
+    filter(n_years >= 2) %>%
+    group_by(aou) %>%
+    mutate(n_cells = n_distinct(cell_id)) %>%
+    filter(n_cells >= 4) %>%
+    nest() 
+  
+  
+  res <- data.frame(aou = c(), max_lat = c(), max_lon = c(), min_lat = c(), min_lon = c(), 
+                    total_cells = c(), area = c())
+  
+    for(a in spp_counts_t1$aou) {
+      df <- spp_counts_t1$data[spp_counts_t1$aou == a][[1]]
+      
+      res1 <- possibly_concave_area(a, df)
+      
+      res <- rbind(res, data.frame(aou = a, res1))
+    }
+
+  spp_counts_t2 <- counts_subs %>%
+    filter(year >= 2013, year <= 2017, aou %in% spp$aou) %>%
+    mutate(lat_cell = round(latitude),
+           lon_cell = round(longitude),
+           cell_id = paste0(lon_cell, ",", lat_cell)) %>%
+    filter(stateroute %in% sample_routes$stateroute) %>%
+    filter(cell_id %in% sample_routes$cell_id) %>%
+    group_by(aou, cell_id, stateroute) %>%
+    mutate(n_years = n_distinct(year)) %>%
+    filter(n_years >= 2) %>%
+    group_by(aou) %>%
+    mutate(n_cells = n_distinct(cell_id)) %>%
+    filter(n_cells >= 4) %>%
+    nest() 
+  
+  res2 <- data.frame(aou = c(), max_lat = c(), max_lon = c(), min_lat = c(), min_lon = c(), 
+                              total_cells = c(), area = c())
+  
+  for(a in spp_counts_t2$aou) {
+    df <- spp_counts_t2$data[spp_counts_t2$aou == a][[1]]
+    
+    res1 <- possibly_concave_area(a, df)
+    
+    res2 <- rbind(res2, data.frame(aou = a, res1))
+  }
+  
+  spp_change <- res %>%
+    left_join(res2, by = c("aou"), suffix = c("_t1", "_t2")) %>%
+    left_join(spp_overlap, by = c("aou")) %>%
+    mutate(delta_area = (as.numeric(area_t2) - as.numeric(area_t1))/as.numeric(area_t1),
+           delta_occ = (total_cells_t2 - total_cells_t1)/overlap_cells)
+  
+   range_samp[[i]] <- spp_change
+}
+
+Sys.time()
+
+range_metrics <- do.call(rbind.data.frame, range_samp)
+
+write.csv(range_metrics, "derived_data/range_metrics_sampled.csv", row.names = F)
 
 range_metrics <- read_csv("derived_data/range_metrics_sampled.csv")
 
