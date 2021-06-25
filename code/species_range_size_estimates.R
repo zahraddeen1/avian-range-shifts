@@ -299,6 +299,7 @@ range_metrics_sum <- range_metrics %>%
   mutate(delta_lat = (max_lat_t2 - min_lat_t2) - (max_lat_t1 - min_lat_t1),
          delta_lon = (max_lon_t2 - min_lon_t2) - (max_lon_t1 - min_lon_t1)) %>%
   group_by(aou) %>%
+  mutate_at(c("delta_area"), ~as.numeric(.)) %>%
   summarize(mean_delta_area = mean(delta_area, na.rm = T),
             sd_delta_area = sd(delta_area, na.rm = T),
             mean_delta_occ = mean(delta_occ, na.rm = T),
