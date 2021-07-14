@@ -17,7 +17,19 @@ range_dir <- paste0(biodrive, "GIS/birds/All/All/")
 
 ## Species
 
-spp_list <- read_csv("derived_data/climate_niche_breadth.csv")
+spp_list <- read_csv("derived_data/climate_niche_breadth.csv") %>%
+  mutate_at(c("aou"), ~case_when(. >= 5670 & . <= 5690 ~ 5660, # Merge juncos
+                                 . >= 4120 & . <= 4130 ~ 4120, # Merge flickers
+                                 . >= 6550 & . <= 6560 ~ 6550,
+                                 TRUE ~ .)) %>% # Merge yellow-rumped warbler
+  mutate_at(c("english_common_name"), ~case_when(. == "(Myrtle Warbler) Yellow-rumped Warbler" | . == "(Audubon's Warbler) Yellow-rumped Warbler" ~ "Yellow-rumped Warbler",
+           grepl("Dark-eyed Junco", .) ~ "Dark-eyed Junco",
+           grepl("Flicker", .) ~ "Northern Flicker",
+           TRUE ~ .)) %>%
+  dplyr::select(-species, -climate_vol) %>%
+  distinct()
+
+taxo <- read_csv("raw_data/Bird_Taxonomy_20110227.csv")
 
 ## BBS route data
 
@@ -35,7 +47,12 @@ counts$stateroute <- counts$statenum*1000 + counts$route
 # Filter BBS to rpid = 101, runtype = 1
 counts_subs <- counts %>%
   filter(rpid == 101) %>%
-  right_join(RT1.routes, by = c("countrynum", "statenum", "stateroute", "year"))
+  right_join(RT1.routes, by = c("countrynum", "statenum", "stateroute", "year")) %>%
+  mutate_at(c("aou"), ~case_when(. >= 5670 & . <= 5690 ~ 5660, # Merge juncos
+                                 . >= 4120 & . <= 4130 ~ 4120, # Merge flickers
+                                 . >= 6550 & . <= 6560 ~ 6550, 
+                                 TRUE ~ .)) %>% # Merge yellow-rumped warbler
+  filter(aou != 4812) # Remove California scrub-jay (range maps not split)
 
 ## Map
 
@@ -126,6 +143,7 @@ spp <- spp_overlap %>%
   filter(overlap > 0.5)
 
 ## Fit concave hulls function, needs AOU and BBS counts data for that species
+# Calculate range metrics
 
 concave_area <- function(aou, df) {
   print(aou)
@@ -150,6 +168,8 @@ concave_area <- function(aou, df) {
   
   concave_nobr_cast <- st_cast(concave_nobr, "POLYGON") %>%
     mutate(polygonID = row.names(.))
+  
+  bbs_br <- st_intersection(bbs_convex, breeding_range)
   
   # does concave area have at least 2 BBS routes in it?
   routes_sf <- routes %>%
@@ -179,12 +199,22 @@ concave_area <- function(aou, df) {
     concave_all <- concave_sub
   }
   
+  # Check for outliers in concave algorithm
+  # Area of concave hull that is not in BBS/Breeding Range intersection
+  concave_all_noBbsBr <- st_difference(concave_all, bbs_br)
+  
+  # Area of concave hull + BBS/Breeding Range intersection
+  concave_all_BbsBr <- st_union(concave_all_noBbsBr, bbs_br)
+  
+  range_outlier <- as.numeric(sum(st_area(concave_all_noBbsBr))/sum(st_area(concave_all_BbsBr)))
+  
   return(data.frame(max_lat = max(df$lat_cell),
              max_lon = max(df$lon_cell),
              min_lat = min(df$lat_cell),
              min_lon = min(df$lon_cell),
              total_cells = n_distinct(df$cell_id),
-             area = sum(st_area(concave_all))))
+             area = sum(st_area(concave_all)),
+             outlier = range_outlier))
 }
 
 possibly_concave_area <- possibly(concave_area, data.frame(max_lat = NA,
@@ -192,17 +222,19 @@ possibly_concave_area <- possibly(concave_area, data.frame(max_lat = NA,
                                                            min_lat = NA,
                                                            min_lon = NA,
                                                            total_cells = NA,
-                                                           area = NA))
+                                                           area = NA,
+                                                           outlier = NA))
 
 ## Range area and range occupancy changes
 ## Sample 1 route per grid cell, 500x
 ## For each species+time window, calculate # grid cells occuppied, max and min lat & lon, range occ (occ cells/cells in polygon)
 
-range_samp <- vector("list", 500)
+range_samp <- vector("list", 1)
 
 Sys.time()
 
-for(i in 14:length(range_samp)) {
+# 1.62 hours per iteration
+for(i in 1:length(range_samp)) {
   
   all_routes <- RT1.routes %>%
     mutate(yr_bin = 5*floor(year/5)) %>%
@@ -242,7 +274,7 @@ for(i in 14:length(range_samp)) {
   
   
   res <- data.frame(aou = c(), max_lat = c(), max_lon = c(), min_lat = c(), min_lon = c(), 
-                    total_cells = c(), area = c())
+                    total_cells = c(), area = c(), outlier = c())
   
     for(a in spp_counts_t1$aou) {
       df <- spp_counts_t1$data[spp_counts_t1$aou == a][[1]]
@@ -268,7 +300,7 @@ for(i in 14:length(range_samp)) {
     nest() 
   
   res2 <- data.frame(aou = c(), max_lat = c(), max_lon = c(), min_lat = c(), min_lon = c(), 
-                              total_cells = c(), area = c())
+                              total_cells = c(), area = c(), outlier = c())
   
   for(a in spp_counts_t2$aou) {
     df <- spp_counts_t2$data[spp_counts_t2$aou == a][[1]]
@@ -297,7 +329,8 @@ range_metrics <- read_csv("derived_data/range_metrics_sampled.csv")
 
 range_metrics_sum <- range_metrics %>%
   mutate(delta_lat = (max_lat_t2 - min_lat_t2) - (max_lat_t1 - min_lat_t1),
-         delta_lon = (max_lon_t2 - min_lon_t2) - (max_lon_t1 - min_lon_t1)) %>%
+         delta_lon = (max_lon_t2 - min_lon_t2) - (max_lon_t1 - min_lon_t1),
+         avg_outlier = (outlier_t1 + outlier_t2)/2) %>%
   group_by(aou) %>%
   mutate_at(c("delta_area"), ~as.numeric(.)) %>%
   summarize(mean_delta_area = mean(delta_area, na.rm = T),
@@ -307,17 +340,20 @@ range_metrics_sum <- range_metrics %>%
             mean_delta_lat = mean(delta_lat, na.rm = T),
             sd_delta_lat = sd(delta_lat, na.rm = T),
             mean_delta_lon = mean(delta_lon, na.rm = T),
-            sd_delta_lon = sd(delta_lon, na.rm = T)) %>%
+            sd_delta_lon = sd(delta_lon, na.rm = T),
+            mean_outlier_index = mean(avg_outlier, na.rm = T),
+            sd_outlier_index = sd(avg_outlier, na.rm = T)) %>%
   filter(!is.na(mean_delta_area))
 
 area_occ_r <- cor(range_metrics_sum$mean_delta_area, range_metrics_sum$mean_delta_occ, use = "pairwise.complete.obs")
 
-area_plot <- ggplot(range_metrics_sum, aes(x = mean_delta_area)) + geom_histogram(col = "white") + labs(x = "Change in area (km^2)")
-occ_plot <- ggplot(range_metrics_sum, aes(x = mean_delta_occ)) + geom_histogram(col = "white") + labs(x = "Change in occupancy")
-area_occ <- ggplot(range_metrics_sum, aes(x = mean_delta_area, y = mean_delta_occ)) + geom_point(alpha = 0.5) + 
+area_plot <- ggplot(range_metrics_sum %>% filter(aou != 7670), aes(x = mean_delta_area)) + geom_histogram(col = "white") + labs(x = "Change in area (km^2)")
+occ_plot <- ggplot(range_metrics_sum %>% filter(aou != 7670), aes(x = mean_delta_occ)) + geom_histogram(col = "white") + labs(x = "Change in occupancy")
+area_occ <- ggplot(range_metrics_sum %>% filter(aou != 7670), aes(x = mean_delta_area, y = mean_delta_occ)) + geom_point(alpha = 0.5) + 
   labs(x = "Change in area (km^2)", y = "Change in occupancy") + geom_hline(yintercept = 0) + geom_vline(xintercept = 0) +
-  annotate(x = 300, y = -0.3, geom = "text", label = paste0("r = ", round(area_occ_r, 2)))
-cowplot::plot_grid(area_plot, occ_plot, area_occ, nrow = 2)
+  annotate(x = 8, y = -0.3, geom = "text", label = paste0("r = ", round(area_occ_r, 2)))
+out_plot <- ggplot(range_metrics_sum, aes(x = mean_outlier_index)) + geom_histogram(col = "white") + labs(x = "Outlier index")
+cowplot::plot_grid(area_plot, occ_plot, area_occ, out_plot, nrow = 2)
 ggsave('figures/range_area_occ_hist.pdf', units = "in", height = 8, width = 10)
 
 ## Plot species BBS occurrences
@@ -333,6 +369,11 @@ for(s in range_metrics_sum$aou) {
   
   d_area <- range_metrics_sum$mean_delta_area[range_metrics_sum$aou == s]
   d_occ <- range_metrics_sum$mean_delta_occ[range_metrics_sum$aou == s]
+  
+  sd_area <- range_metrics_sum$sd_delta_area[range_metrics_sum$aou == s]
+  sd_occ <- range_metrics_sum$sd_delta_occ[range_metrics_sum$aou == s]
+  
+  outlier <- range_metrics_sum$mean_outlier_index[range_metrics_sum$aou == s]
   
   br <- read_sf(paste0(range_dir, f))
   names(br)[1:14] <- toupper(names(br)[1:14])
@@ -447,6 +488,7 @@ for(s in range_metrics_sum$aou) {
     concave_all2 <- concave_sub2
   }
     
+  # Add conf intervals for delta area and delta occ; add range outlier metric
     range_pol_1 <- tm_shape(na_map) + tm_polygons() + tm_shape(breeding_range) + tm_polygons(col = "skyblue") + 
       tm_shape(routes_raster_t1) + tm_raster(col = "n_bins", legend.show = F, palette = "Reds") + tm_layout(title = name)
     
@@ -454,10 +496,13 @@ for(s in range_metrics_sum$aou) {
       tm_shape(concave_all) + tm_polygons(col = "skyblue4", alpha = 0.5)
     
     range_pol_2 <- tm_shape(na_map) + tm_polygons() + tm_shape(breeding_range) + tm_polygons(col = "skyblue") + 
-      tm_shape(routes_raster_t2) + tm_raster(col = "n_bins", legend.show = F, palette = "Reds") + tm_layout(title = paste0("change area = ", round(d_area, 2), "\nchange occ = ", round(d_occ, 2)))
+      tm_shape(routes_raster_t2) + tm_raster(col = "n_bins", legend.show = F, palette = "Reds") + 
+      tm_layout(title = paste0("change area = ", round(d_area, 2), "+/- ", round(sd_area*1.96, 2),
+                               "\nchange occ = ", round(d_occ, 2), "+/- ", round(sd_occ*1.96, 2)))
     
     range_hulls_2 <- tm_shape(na_map) + tm_polygons() + 
-      tm_shape(concave_all2) + tm_polygons(col = "skyblue4", alpha = 0.5)
+      tm_shape(concave_all2) + tm_polygons(col = "skyblue4", alpha = 0.5) +
+      tm_layout(title = paste0("outlier index = ", round(outlier, 2)))
     
     range_maps <- tmap_arrange(range_pol_1, range_hulls_1, range_pol_2, range_hulls_2, nrow =2)
     
