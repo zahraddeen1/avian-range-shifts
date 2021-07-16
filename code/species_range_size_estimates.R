@@ -206,7 +206,8 @@ concave_area <- function(aou, df) {
   # Area of concave hull + BBS/Breeding Range intersection
   concave_all_BbsBr <- st_union(concave_all_noBbsBr, bbs_br)
   
-  range_outlier <- as.numeric(sum(st_area(concave_all_noBbsBr))/sum(st_area(concave_all_BbsBr)))
+  range_outlier <- as.numeric(sum(st_area(concave_all_noBbsBr)))
+  range_outlier_denom <- as.numeric(sum(st_area(concave_all_BbsBr)))
   
   return(data.frame(max_lat = max(df$lat_cell),
              max_lon = max(df$lon_cell),
@@ -214,7 +215,8 @@ concave_area <- function(aou, df) {
              min_lon = min(df$lon_cell),
              total_cells = n_distinct(df$cell_id),
              area = sum(st_area(concave_all)),
-             outlier = range_outlier))
+             outlier = range_outlier,
+             outlier_denom = range_outlier_denom))
 }
 
 possibly_concave_area <- possibly(concave_area, data.frame(max_lat = NA,
@@ -223,7 +225,8 @@ possibly_concave_area <- possibly(concave_area, data.frame(max_lat = NA,
                                                            min_lon = NA,
                                                            total_cells = NA,
                                                            area = NA,
-                                                           outlier = NA))
+                                                           outlier = NA,
+                                                           outlier_denom = NA))
 
 ## Range area and range occupancy changes
 ## Sample 1 route per grid cell, 500x
@@ -502,7 +505,7 @@ for(s in range_metrics_sum$aou) {
     
     range_hulls_2 <- tm_shape(na_map) + tm_polygons() + 
       tm_shape(concave_all2) + tm_polygons(col = "skyblue4", alpha = 0.5) +
-      tm_layout(title = paste0("outlier index = ", round(outlier, 2)))
+      tm_layout(title = paste0("outlier index = ", round(outlier/1000000, 2), " km^2"))
     
     range_maps <- tmap_arrange(range_pol_1, range_hulls_1, range_pol_2, range_hulls_2, nrow =2)
     
