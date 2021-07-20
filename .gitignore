@@ -29,3 +29,4 @@ vignettes/*.pdf
 .DS_Store
 avian-range-shifts.Rproj
 bigdata
+.Rproj.user
