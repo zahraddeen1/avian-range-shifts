@@ -332,8 +332,7 @@ range_metrics <- read_csv("derived_data/range_metrics_sampled.csv")
 
 range_metrics_sum <- range_metrics %>%
   mutate(delta_lat = (max_lat_t2 - min_lat_t2) - (max_lat_t1 - min_lat_t1),
-         delta_lon = (max_lon_t2 - min_lon_t2) - (max_lon_t1 - min_lon_t1),
-         avg_outlier = (outlier_t1 + outlier_t2)/2) %>%
+         delta_lon = (max_lon_t2 - min_lon_t2) - (max_lon_t1 - min_lon_t1)) %>%
   group_by(aou) %>%
   mutate_at(c("delta_area"), ~as.numeric(.)) %>%
   summarize(mean_delta_area = mean(delta_area, na.rm = T),
@@ -344,8 +343,8 @@ range_metrics_sum <- range_metrics %>%
             sd_delta_lat = sd(delta_lat, na.rm = T),
             mean_delta_lon = mean(delta_lon, na.rm = T),
             sd_delta_lon = sd(delta_lon, na.rm = T),
-            mean_outlier_index = mean(avg_outlier, na.rm = T),
-            sd_outlier_index = sd(avg_outlier, na.rm = T)) %>%
+            mean_outlier_t1 = mean(outlier_t1, na.rm = T),
+            mean_outlier_t2 = mean(outlier_t2, na.rm = T)) %>%
   filter(!is.na(mean_delta_area))
 
 area_occ_r <- cor(range_metrics_sum$mean_delta_area, range_metrics_sum$mean_delta_occ, use = "pairwise.complete.obs")
@@ -364,8 +363,12 @@ ggsave('figures/range_area_occ_hist.pdf', units = "in", height = 8, width = 10)
 ## Convex hull range size; concave range size
 ## Mean, conf int of range area and range occ deltas
 
+## Order spp by outlier
+order_outlier <- range_metrics_sum %>%
+  arrange(desc(mean_outlier_t1))
+
 pdf("figures/spp_range_estimates.pdf", height = 8, width = 10)
-for(s in range_metrics_sum$aou) {
+for(s in order_outlier$aou) {
   name <- spp$english_common_name[spp$aou == s]
   
   f <- spp$file[spp$aou == s]
@@ -376,7 +379,8 @@ for(s in range_metrics_sum$aou) {
   sd_area <- range_metrics_sum$sd_delta_area[range_metrics_sum$aou == s]
   sd_occ <- range_metrics_sum$sd_delta_occ[range_metrics_sum$aou == s]
   
-  outlier <- range_metrics_sum$mean_outlier_index[range_metrics_sum$aou == s]
+  outlier1 <- range_metrics_sum$mean_outlier_t1[range_metrics_sum$aou == s]
+  outlier2 <- range_metrics_sum$mean_outlier_t2[range_metrics_sum$aou == s]
   
   br <- read_sf(paste0(range_dir, f))
   names(br)[1:14] <- toupper(names(br)[1:14])
@@ -496,7 +500,8 @@ for(s in range_metrics_sum$aou) {
       tm_shape(routes_raster_t1) + tm_raster(col = "n_bins", legend.show = F, palette = "Reds") + tm_layout(title = name)
     
     range_hulls_1 <- tm_shape(na_map) + tm_polygons() + 
-      tm_shape(concave_all) + tm_polygons(col = "skyblue4", alpha = 0.5)
+      tm_shape(concave_all) + tm_polygons(col = "skyblue4", alpha = 0.5) +
+      tm_layout(title = paste0("outlier index = ", round(outlier1/1000000, 2), " km^2"))
     
     range_pol_2 <- tm_shape(na_map) + tm_polygons() + tm_shape(breeding_range) + tm_polygons(col = "skyblue") + 
       tm_shape(routes_raster_t2) + tm_raster(col = "n_bins", legend.show = F, palette = "Reds") + 
@@ -505,7 +510,7 @@ for(s in range_metrics_sum$aou) {
     
     range_hulls_2 <- tm_shape(na_map) + tm_polygons() + 
       tm_shape(concave_all2) + tm_polygons(col = "skyblue4", alpha = 0.5) +
-      tm_layout(title = paste0("outlier index = ", round(outlier/1000000, 2), " km^2"))
+      tm_layout(title = paste0("outlier index = ", round(outlier2/1000000, 2), " km^2"))
     
     range_maps <- tmap_arrange(range_pol_1, range_hulls_1, range_pol_2, range_hulls_2, nrow =2)
     
