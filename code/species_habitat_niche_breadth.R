@@ -18,7 +18,7 @@ derived_data <- "derived_data/"
 
 ## BioArk directory
 info <- sessionInfo()
-bioark <- ifelse(grepl("apple", info$platform), "/Volumes", "\\\\BioArk")
+bioark <- ifelse(grepl("apple", info$platform), "/Volumes", "\\\\bio.unc.edu")
 
 ## species range maps directory
 range_dir <- paste0(bioark, "/hurlbertlab/GIS/birds/All/All/")
