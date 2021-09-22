@@ -11,8 +11,8 @@ diet <- read_csv("derived_data/diet_niche_breadth.csv")
 
 range <- read_csv("derived_data/range_metrics_sampled.csv") %>%
   group_by(aou) %>%
-  summarize(mean_area = mean(area_t2-area_t1, na.rm = T),
-            mean_occ = mean((total_cells_t2 - total_cells_t1)/overlap_cells))
+  summarize(mean_area = mean((area_t2-area_t1)/area_t1, na.rm = T),
+            mean_occ = mean((total_cells_t2 - total_cells_t1)/overlap_cells, na.rm = T))
 
 poptrend <- read_csv("raw_data/BBS_1966-2017_core_trend_revised_v2.csv", 
                      col_types = cols(AOU = col_double())) %>%
@@ -30,6 +30,7 @@ range_mod <- clim %>%
 ## Fit piecewiseSEM
 
 spp_data <- as.data.frame(range_mod)
+write.csv(spp_data, "derived_data/sem_mod_input.csv", row.names = F)
 
 spp_psem <- psem(
   lm(mean_occ ~ shannonE_diet + climate_vol + ssi + Trend, data = spp_data),
