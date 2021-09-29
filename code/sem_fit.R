@@ -30,7 +30,7 @@ range_mod <- clim %>%
 ## Fit piecewiseSEM
 
 spp_data <- as.data.frame(range_mod)
-write.csv(spp_data, "derived_data/sem_mod_input.csv", row.names = F)
+# write.csv(spp_data, "derived_data/sem_mod_input.csv", row.names = F)
 
 spp_psem <- psem(
   lm(mean_occ ~ shannonE_diet + climate_vol + ssi + Trend, data = spp_data),
