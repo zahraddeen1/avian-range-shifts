@@ -105,23 +105,40 @@ hab_niche <- setNames(vars_phylo$ssi, vars_phylo$phylo_name)
 clim_niche <- setNames(vars_phylo$climate_vol, vars_phylo$phylo_name)
 diet_niche <- setNames(vars_phylo$shannonE_diet, vars_phylo$phylo_name)
 
-hab_pvals <- purrr::map_dfc(bird_trees, ~phylosig(., hab_niche, test = T)$P)
-clim_pvals <- purrr::map_dfc(bird_trees, ~phylosig(., clim_niche, test = T)$P)
-diet_pvals <- purrr::map_dfc(bird_trees, ~phylosig(., diet_niche, test = T)$P)
+hab_ls <- purrr::map_dfc(bird_trees, ~phylosig(., hab_niche, method = "lambda")$lambda)
+clim_ls <- purrr::map_dfc(bird_trees, ~phylosig(., clim_niche, method = "lambda")$lambda)
+diet_ls <- purrr::map_dfc(bird_trees, ~phylosig(., diet_niche, method = "lambda")$lambda)
 
-hab_df <- hab_pvals %>%
+
+hab_ks <- purrr::map_dfc(bird_trees, ~phylosig(., hab_niche, test = T)$K)
+clim_ks <- purrr::map_dfc(bird_trees, ~phylosig(., clim_niche, test = T)$K)
+diet_ks <- purrr::map_dfc(bird_trees, ~phylosig(., diet_niche, test = T)$K)
+
+hab_df <- hab_ks %>%
   pivot_longer(names_to = "tree", values_to = "hab", 1:100)
 
-clim_df <- clim_pvals %>%
+clim_df <- clim_ks %>%
   pivot_longer(names_to = "tree", values_to = "clim", 1:100)
 
-diet_df <- diet_pvals %>%
+diet_df <- diet_ks %>%
+  pivot_longer(names_to = "tree", values_to = "diet", 1:100)
+
+hab_ldf <- hab_ls %>%
+  pivot_longer(names_to = "tree", values_to = "hab", 1:100)
+
+clim_ldf <- clim_ls %>%
+  pivot_longer(names_to = "tree", values_to = "clim", 1:100)
+
+diet_ldf <- diet_ls %>%
   pivot_longer(names_to = "tree", values_to = "diet", 1:100)
 
 niche_phylo <- hab_df %>%
   left_join(clim_df) %>%
-  left_join(diet_df)
+  left_join(diet_df) %>%
+  left_join(hab_ldf, by = c("tree"),  suffix = c("_k", "_lambda")) %>%
+  left_join(clim_ldf, by = c("tree"),  suffix = c("_k", "_lambda")) %>%  
+  left_join(diet_ldf, by = c("tree"),  suffix = c("_k", "_lambda"))
 # write.csv(niche_phylo, "derived_data/niche_phylotest_pvals.csv", row.names = F)
 niche_phylo <- read_csv("derived_data/niche_phylotest_pvals.csv")
 
-boxplot(niche_phylo[, 2:4])
+boxplot(niche_phylo[,2:7])
