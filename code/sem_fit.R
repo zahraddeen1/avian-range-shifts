@@ -2,6 +2,8 @@
 
 library(tidyverse)
 library(piecewiseSEM)
+library(nlme)
+library(ape)
 
 ## Read in data
 
@@ -25,27 +27,58 @@ range_mod <- clim %>%
   left_join(dplyr::select(diet, aou, shannonE_diet), by = c("aou")) %>%
   left_join(range) %>%
   left_join(select(poptrend, AOU, Trend), by = c("aou" = "AOU")) %>%
+  mutate_at(c("ssi"), ~.*-1) %>%
   filter(!is.na(mean_area) & !is.na(ssi))
+
+## Phylo trees
+
+tree_taxo <- read_csv("raw_data/BLIOCPhyloMasterTax.csv")
+
+spp_taxo <- clim %>%
+  filter(aou %in% range_mod$aou) %>%
+  mutate("phylo_name" = case_when(aou == 7222 ~ "Troglodytes_troglodytes",
+                                  aou == 6760 ~ "Seiurus_motacilla",
+                                  aou ==  6410 ~ "Vermivora_pinus",
+                                  aou == 5780 ~ "Aimophila_cassinii",
+                                  TRUE ~ matched_filename)) %>%
+  left_join(tree_taxo, by = c("phylo_name" = "TipLabel")) %>%
+  select(aou, phylo_name)
+
+vars_phylo <- range_mod %>%
+  left_join(spp_taxo)
+
+bird_trees <- read.nexus("raw_data/birdtrees/output.nex")
+tree1 <- bird_trees$tree_6755
 
 ## Fit piecewiseSEM
 
-spp_data <- as.data.frame(range_mod)
+spp_data <- as.data.frame(vars_phylo)
 # write.csv(spp_data, "derived_data/sem_mod_input.csv", row.names = F)
 
+spp_data <- spp_data[which(spp_data$phylo_name %in% tree1$tip.label), ]
+rownames(spp_data) <- spp_data$phylo_name
+
 spp_psem <- psem(
-  lm(mean_occ ~ shannonE_diet + climate_vol + ssi + Trend, data = spp_data),
-  lm(Trend ~ ssi + climate_vol + shannonE_diet, data = spp_data),
-  lm(mean_area ~ ssi + climate_vol + shannonE_diet + Trend, data = spp_data),
+  gls(mean_occ ~ shannonE_diet + climate_vol + ssi + Trend, 
+      na.action = na.omit,
+      correlation = corBrownian(0.5, tree1),
+      data = spp_data),
+  gls(Trend ~ ssi + climate_vol + shannonE_diet,
+      correlation = corBrownian(0.5, tree1),
+      na.action = na.omit,
+      data = spp_data),
+  gls(mean_area ~ ssi + climate_vol + shannonE_diet + Trend,
+      na.action = na.omit,
+      correlation = corBrownian(0.5, tree1),
+      data = spp_data),
   data = spp_data)
 
 summary(spp_psem)
 
-spp_psem_simple <- psem(
-  lm(mean_occ ~ shannonE_diet + climate_vol + ssi, data = spp_data),
-  lm(Trend ~ ssi + climate_vol + shannonE_diet, data = spp_data),
-  lm(mean_area ~ ssi + climate_vol + shannonE_diet, data = spp_data),
-  data = spp_data)
-
-summary(spp_psem_simple)
+plot(spp_psem,
+     ns_dashed = T,
+     node_attrs = list(
+       shape = "rectangle", color = "black", x = 1:6, y = 1:3,
+       width = 1))
 
 

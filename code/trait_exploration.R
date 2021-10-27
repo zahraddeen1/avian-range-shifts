@@ -142,3 +142,31 @@ niche_phylo <- hab_df %>%
 niche_phylo <- read_csv("derived_data/niche_phylotest_pvals.csv")
 
 boxplot(niche_phylo[,2:7])
+
+## Variance partitioning by order, family, genus, species
+
+all_taxo <- clim %>%
+  filter(aou %in% all_vars$aou) %>%
+  mutate("phylo_name" = case_when(aou == 7222 ~ "Troglodytes_troglodytes",
+                                  aou == 6760 ~ "Seiurus_motacilla",
+                                  aou ==  6410 ~ "Vermivora_pinus",
+                                  aou == 5780 ~ "Aimophila_cassinii",
+                                  TRUE ~ matched_filename)) %>%
+  left_join(tree_taxo, by = c("phylo_name" = "TipLabel")) %>%
+  select(aou, IOCOrder, family, genus, species, phylo_name)
+
+vars_all_phylo <- all_vars %>%
+  left_join(all_taxo)
+
+library(nlme)
+
+hab_nest <- lme(ssi ~ 1, random = ~ 1|family/genus, data = vars_all_phylo)
+varcomp(hab_nest, T, F)
+
+clim_nest <- lme(climate_vol ~ 1, random = ~ 1|family/genus, data = vars_all_phylo)
+varcomp(clim_nest, T, F)
+
+diet_nest <- lme(shannonE_diet ~ 1, random = ~ 1|family/genus, data = vars_all_phylo)
+varcomp(diet_nest, T, F)
+
+## Make line graph of this for supplement
