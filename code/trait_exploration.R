@@ -66,7 +66,7 @@ all_vars <- clim %>%
   filter(!is.na(mean_area) & !is.na(ssi)) %>%
   left_join(ro_correlates, by = c("aou" = "AOU")) %>%
   left_join(range_overlap) %>%
-  select(aou, species_code, climate_vol, ssi, shannonE_diet, mean_area, mean_occ, Trend, logMass,
+  select(aou, species_code, climate_vol, ssi, shannonE_diet, mean_area, mean_occ, Trend, logMass,migclass,
          log_Brange_Area, overlap) %>%
   filter(species_code != "wesblu") %>%
   na.omit()
@@ -170,3 +170,42 @@ diet_nest <- lme(shannonE_diet ~ 1, random = ~ 1|family/genus, data = vars_all_p
 varcomp(diet_nest, T, F)
 
 ## Make line graph of this for supplement
+
+## Variance partitioning: niche vs migclass/body size
+
+varpart <- all_vars %>%
+  summarize(trend_all = summary(lm(Trend ~ climate_vol + ssi + shannonE_diet + migclass + logMass, .))$r.squared,
+            trend_niche = summary(lm(Trend ~ climate_vol + ssi + shannonE_diet, .))$r.squared,
+            trend_other = summary(lm(Trend ~ migclass + logMass, .))$r.squared,
+            occ_all = summary(lm(mean_occ ~ climate_vol + ssi + shannonE_diet + migclass + logMass, .))$r.squared,
+            occ_niche = summary(lm(mean_occ ~ climate_vol + ssi + shannonE_diet, .))$r.squared,
+            occ_other = summary(lm(mean_occ ~ migclass + logMass, .))$r.squared,
+            area_all = summary(lm(mean_area ~ climate_vol + ssi + shannonE_diet + migclass + logMass, .))$r.squared,
+            area_niche = summary(lm(mean_area ~ climate_vol + ssi + shannonE_diet, .))$r.squared,
+            area_other = summary(lm(mean_area ~ migclass + logMass, .))$r.squared) %>%
+  mutate(trend_niche_only = trend_all - trend_other,
+         trend_other_only = trend_all - trend_niche,
+         trend_shared = trend_niche_only + trend_other_only - trend_all,
+         area_niche_only = area_all - area_other,
+         area_other_only = area_all - area_niche,
+         area_shared = area_all - area_niche_only - area_other_only,
+         occ_niche_only = occ_all - occ_other,
+         occ_other_only = occ_all - occ_niche,
+         occ_shared = occ_all - occ_niche_only - occ_other_only) 
+
+varpart_plot <- varpart %>%
+  select(trend_niche_only:occ_shared) %>%
+  pivot_longer(values_to = "r2", names_to = "var", trend_niche_only:occ_shared) %>%
+  mutate(response = word(var, 1, 1, sep = "_"),
+         preds = word(var, 2, sep = "_"))
+
+theme_set(theme_classic(base_size = 15))
+ggplot(varpart_plot, aes(x = response, y = r2, fill = preds)) + geom_bar(position = "stack", stat = "identity") +
+  coord_flip() +
+  labs(x = "Variance explained", y = "Response variable", fill = "") +
+  scale_fill_viridis_d(labels = c("niche" = "Niche", "other" = "Life history", "shared" = "Shared")) +
+  scale_x_discrete(labels = c("trend" = "Population trend", "occ" = expression(paste(Delta, "Range occupancy")),
+                              "area" = expression(paste(Delta, "Range area")))) +
+  theme(legend.position = c(0.8, 0.6))
+ggsave("figures/variance_paritioning.pdf")
+

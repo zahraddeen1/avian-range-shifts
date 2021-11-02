@@ -81,4 +81,14 @@ plot(spp_psem,
        shape = "rectangle", color = "black", x = 1:6, y = 1:3,
        width = 1))
 
-
+spp_psem_simple <- spp_psem <- psem(
+  gls(mean_occ ~ shannonE_diet + climate_vol + ssi + Trend, 
+      na.action = na.omit,
+      data = spp_data),
+  gls(Trend ~ ssi + climate_vol + shannonE_diet,
+      na.action = na.omit,
+      data = spp_data),
+  gls(mean_area ~ ssi + climate_vol + shannonE_diet + Trend,
+      na.action = na.omit,
+      data = spp_data),
+  data = spp_data)
