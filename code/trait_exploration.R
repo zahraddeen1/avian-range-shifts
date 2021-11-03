@@ -77,6 +77,48 @@ summary(trait_pca)
 ggbiplot(trait_pca, labels = all_vars$species_code) + theme_classic(base_size = 12)
 ggsave("figures/trait_biplot.pdf", units = "in", height = 8, width= 10)
 
+## Pairwise plots of variables in SEM
+
+# diet x hab, clim x hab
+# occ x area (don't need pop trend since it is other data product?)
+
+theme_set(theme_classic(base_size = 15))
+diet_hab <- ggplot(all_vars, aes(x = shannonE_diet, y = ssi)) + 
+  geom_point() +
+  geom_text(data = filter(all_vars, species_code %in% c("amecro", "seaspa")), 
+            aes(y = ssi - 0.1, label = species_code)) +
+  xlim(-0.1, 0.9) +
+  annotate(geom = "text", x = 0.8, y = 0.5, label = "Generalist") +
+  annotate(geom = "text", x = 0, y = 3, label = "Specialist") +
+  annotate(geom = "text", x = 0.75, y = 3, 
+           label = paste0("r = ", round(cor(all_vars$ssi, all_vars$shannonE_diet, use = "pairwise.complete.obs"), 2))) +
+  labs(x = "Diet niche breadth", y = "Habitat specialization")
+
+clim_hab <- ggplot(all_vars, aes(x = climate_vol, y = ssi)) + 
+  geom_point() +
+  xlim(-0.05, 3.3) +
+  geom_text(data = filter(all_vars, species_code %in% c("larbun", "bushti")),
+            aes(y = ssi - 0.1, label = species_code)) +
+  annotate(geom = "text", x = 3, y = 0.5, label = "Generalist") +
+  annotate(geom = "text", x = 0.2, y = 3, label = "Specialist") +
+  annotate(geom = "text", x = 3, y = 3, 
+           label = paste0("r = ", round(cor(all_vars$ssi, all_vars$climate_vol, use = "pairwise.complete.obs"), 2))) +
+  labs(x = "Climate niche breadth", y = "")
+
+occ_area <- ggplot(filter(all_vars, species_code != "bushti"), aes(x = mean_occ, y = mean_area)) + 
+  geom_point() +
+  geom_text(data = filter(all_vars, species_code %in% c("fiscro", "cacwre")),
+            aes(y = mean_area - 0.1, label = species_code)) +
+  geom_hline(yintercept = 0, lty = 2) +
+  geom_vline(xintercept = 0, lty = 2) +
+  xlim(-0.3, 0.4) +
+ annotate(geom = "text", x = 0.35, y = 3.5, 
+           label = paste0("r = ", round(cor(all_vars$mean_occ, all_vars$mean_area, use = "pairwise.complete.obs"), 2))) +
+  labs(x = expression(paste(Delta, "Range occupancy")), y = expression(paste(Delta, "Range area")))
+
+cowplot::plot_grid(diet_hab, clim_hab, occ_area, nrow = 2, labels = c("a", "b", "c"))
+ggsave("figures/model_input_correlations.pdf", units = "in", height = 7, width = 9)
+
 ### Phylogenetic signal of niche measurements
 
 tree_taxo <- read_csv("raw_data/BLIOCPhyloMasterTax.csv")
@@ -170,6 +212,8 @@ diet_nest <- lme(shannonE_diet ~ 1, random = ~ 1|family/genus, data = vars_all_p
 varcomp(diet_nest, T, F)
 
 ## Make line graph of this for supplement
+
+
 
 ## Variance partitioning: niche vs migclass/body size
 
