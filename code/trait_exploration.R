@@ -1,10 +1,21 @@
 ## Trait data correlations
 
 library(tidyverse)
-library(ggbiplot)
+# library(ggbiplot)
+library(nlme)
+library(ape)
+library(phytools)
+library(cowplot)
 
 ## Read in data
 
+# Taxonomy
+tree_taxo <- read_csv("raw_data/BLIOCPhyloMasterTax.csv")
+
+## read in 100 trees
+bird_trees <- read.nexus("raw_data/birdtrees/output.nex")
+
+# Model variables
 clim <- read_csv("derived_data/climate_niche_breadth.csv")
 hab <- read_csv("derived_data/habitat_niche_ssi.csv")
 diet <- read_csv("derived_data/diet_niche_breadth.csv")
@@ -26,7 +37,6 @@ range_overlap <- read_csv("derived_data/spp_bbs_range_overlap.csv") %>%
   select(aou, species_code, overlap)
 
 ## Model table
-
 all_vars <- clim %>%
   left_join(hab, by = c("species_code" = "spp")) %>%
   left_join(dplyr::select(diet, aou, shannonE_diet), by = c("aou")) %>%
@@ -36,8 +46,32 @@ all_vars <- clim %>%
   left_join(ro_correlates, by = c("aou" = "AOU")) %>%
   left_join(range_overlap) %>%
   select(aou, species_code, climate_vol, ssi, shannonE_diet, mean_area, mean_occ, Trend, logMass,
-         log_Brange_Area, overlap) %>%
+         log_Brange_Area, Brange_Area_km2, overlap) %>%
   filter(species_code != "wesblu")
+
+## Taxonomy included
+spp_taxo <- clim %>%
+  filter(aou %in% all_vars$aou) %>%
+  mutate("phylo_name" = case_when(aou == 7222 ~ "Troglodytes_troglodytes",
+                                  aou == 6760 ~ "Seiurus_motacilla",
+                                  aou ==  6410 ~ "Vermivora_pinus",
+                                  aou == 5780 ~ "Aimophila_cassinii",
+                                  TRUE ~ matched_filename)) %>%
+  left_join(tree_taxo, by = c("phylo_name" = "TipLabel")) %>%
+  select(aou, phylo_name)
+
+all_taxo <- clim %>%
+  filter(aou %in% all_vars$aou) %>%
+  mutate("phylo_name" = case_when(aou == 7222 ~ "Troglodytes_troglodytes",
+                                  aou == 6760 ~ "Seiurus_motacilla",
+                                  aou ==  6410 ~ "Vermivora_pinus",
+                                  aou == 5780 ~ "Aimophila_cassinii",
+                                  TRUE ~ matched_filename)) %>%
+  left_join(tree_taxo, by = c("phylo_name" = "TipLabel")) %>%
+  select(aou, IOCOrder, family, genus, species, phylo_name)
+
+vars_phylo <- all_vars %>%
+  left_join(spp_taxo)
 
 # Correlation panel
 panel.cor <- function(x, y){
@@ -82,66 +116,73 @@ ggsave("figures/trait_biplot.pdf", units = "in", height = 8, width= 10)
 # diet x hab, clim x hab
 # occ x area (don't need pop trend since it is other data product?)
 
+all_vars_taxo <- all_vars %>%
+  left_join(all_taxo) %>%
+  dplyr::group_by(family) %>%
+  mutate(n_spp = n_distinct(aou)) %>%
+  mutate(family_plot = case_when(n_spp == 1 ~ "Other",
+                                 TRUE ~ family))
+
+family_cols <- c(RColorBrewer::brewer.pal(12,"Paired"), "gray")
+
 theme_set(theme_classic(base_size = 15))
-diet_hab <- ggplot(all_vars, aes(x = shannonE_diet, y = ssi)) + 
-  geom_point() +
-  geom_text(data = filter(all_vars, species_code %in% c("amecro", "seaspa")), 
-            aes(y = ssi - 0.1, label = species_code)) +
-  xlim(-0.1, 0.9) +
-  annotate(geom = "text", x = 0.8, y = 0.5, label = "Generalist") +
-  annotate(geom = "text", x = 0, y = 3, label = "Specialist") +
-  annotate(geom = "text", x = 0.75, y = 3, 
-           label = paste0("r = ", round(cor(all_vars$ssi, all_vars$shannonE_diet, use = "pairwise.complete.obs"), 2))) +
-  labs(x = "Diet niche breadth", y = "Habitat specialization")
+diet_hab <- ggplot(all_vars_taxo, aes(x = shannonE_diet, y = -1*ssi, col = family_plot, size = Brange_Area_km2)) + 
+  geom_point(alpha= 0.75) +
+  geom_text(data = filter(all_vars_taxo, species_code %in% c("purfin")),
+            aes(y = -1*ssi + 0.1, label = species_code), col = "black") +
+  annotate(geom = "text", y = -3, x = 0.1, label = "Specialist") +
+  annotate(geom = "text", y = -3, x = 0.75, label = "Generalist") +
+  annotate(geom = "text", x = 0.75, y = -0.5, 
+           label = paste0("r = ", round(cor(all_vars_taxo$ssi, all_vars_taxo$shannonE_diet, use = "pairwise.complete.obs"), 2))) +
+  labs(x = " ", y = "Habitat niche breadth", col = "Family", size = "Breeding range area") +
+  scale_color_manual(values = family_cols)
 
-clim_hab <- ggplot(all_vars, aes(x = climate_vol, y = ssi)) + 
-  geom_point() +
-  xlim(-0.05, 3.3) +
-  geom_text(data = filter(all_vars, species_code %in% c("larbun", "bushti")),
-            aes(y = ssi - 0.1, label = species_code)) +
-  annotate(geom = "text", x = 3, y = 0.5, label = "Generalist") +
-  annotate(geom = "text", x = 0.2, y = 3, label = "Specialist") +
-  annotate(geom = "text", x = 3, y = 3, 
+clim_hab <- ggplot(all_vars_taxo, aes(x = climate_vol, y = -1*ssi, col = family_plot, size = Brange_Area_km2)) + 
+  geom_point(alpha = 0.75) +
+  geom_text(data = filter(all_vars_taxo, species_code %in% c("purfin")),
+            aes(y = -1*ssi + 0.1, label = species_code), col = "black") +
+  annotate(geom = "text", y = -3, x = 2.85, label = "Generalist") +
+  annotate(geom = "text", y = -3, x = 0.35, label = "Specialist") +
+  annotate(geom = "text", x = 3, y = -0.5, 
            label = paste0("r = ", round(cor(all_vars$ssi, all_vars$climate_vol, use = "pairwise.complete.obs"), 2))) +
-  labs(x = "Climate niche breadth", y = "")
+  labs(x = "Climate niche breadth", y = "") +
+  theme(legend.position = "none") +
+  scale_color_manual(values = family_cols) 
 
-occ_area <- ggplot(filter(all_vars, species_code != "bushti"), aes(x = mean_occ, y = mean_area)) + 
-  geom_point() +
-  geom_text(data = filter(all_vars, species_code %in% c("fiscro", "cacwre")),
-            aes(y = mean_area - 0.1, label = species_code)) +
+diet_clim <- ggplot(all_vars_taxo, aes(x = shannonE_diet, y = climate_vol, col = family_plot, size = Brange_Area_km2)) + 
+  geom_point(alpha= 0.75) +
+  geom_text(data = filter(all_vars_taxo, species_code %in% c("purfin")),
+            aes(y = climate_vol - 0.1, label = species_code), col = "black") +
+  annotate(geom = "text", y = 0, x = 0.1, label = "Specialist") +
+  annotate(geom = "text", y = 0, x = 0.75, label = "Generalist") +
+  annotate(geom = "text", x = 0.75, y = 3, 
+           label = paste0("r = ", round(cor(all_vars_taxo$climate_vol, all_vars_taxo$shannonE_diet, use = "pairwise.complete.obs"), 2))) +
+  labs(x = "Diet niche breadth", y = "Climate niche breadth", col = "Family", size = "Breeding range area") +
+  scale_color_manual(values = family_cols) +
+  theme(legend.position = "none")
+
+occ_area <- ggplot(filter(all_vars_taxo, species_code != "bushti"), aes(x = mean_occ, y = mean_area, col = family_plot, size = Brange_Area_km2)) + 
+  geom_point(alpha = 0.75) +
+  # geom_text(data = filter(all_vars_taxo, species_code %in% c("purfin")),
+  #           aes(y = mean_area - 0.1, label = species_code), col = "black") +
   geom_hline(yintercept = 0, lty = 2) +
   geom_vline(xintercept = 0, lty = 2) +
   xlim(-0.3, 0.4) +
  annotate(geom = "text", x = 0.35, y = 3.5, 
            label = paste0("r = ", round(cor(all_vars$mean_occ, all_vars$mean_area, use = "pairwise.complete.obs"), 2))) +
-  labs(x = expression(paste(Delta, "Range occupancy")), y = expression(paste(Delta, "Range area")))
+  labs(x = expression(paste(Delta, "Range occupancy")), y = expression(paste(Delta, "Range area"))) +
+  theme(legend.position = "none") +
+  scale_color_manual(values = family_cols) 
 
-cowplot::plot_grid(diet_hab, clim_hab, occ_area, nrow = 2, labels = c("a", "b", "c"))
-ggsave("figures/model_input_correlations.pdf", units = "in", height = 7, width = 9)
+scatter_legend <- get_legend(diet_hab)
+
+panels <- plot_grid(diet_hab + theme(legend.position = "none"), clim_hab, 
+                    diet_clim, occ_area,
+                   nrow = 2, labels = c("a", "b", "c", "d"))
+plot_grid(panels, scatter_legend, ncol = 2, rel_widths= c(0.8, 0.2))
+ggsave("figures/model_input_correlations.pdf", units = "in", height = 7, width = 10)
 
 ### Phylogenetic signal of niche measurements
-
-tree_taxo <- read_csv("raw_data/BLIOCPhyloMasterTax.csv")
-
-spp_taxo <- clim %>%
-  filter(aou %in% all_vars$aou) %>%
-  mutate("phylo_name" = case_when(aou == 7222 ~ "Troglodytes_troglodytes",
-                                  aou == 6760 ~ "Seiurus_motacilla",
-                                  aou ==  6410 ~ "Vermivora_pinus",
-                                  aou == 5780 ~ "Aimophila_cassinii",
-                                  TRUE ~ matched_filename)) %>%
-  left_join(tree_taxo, by = c("phylo_name" = "TipLabel")) %>%
-  select(aou, phylo_name)
-
-## read in 100 trees
-
-library(ape)
-library(phytools)
-
-vars_phylo <- all_vars %>%
-  left_join(spp_taxo)
-
-bird_trees <- read.nexus("raw_data/birdtrees/output.nex")
 
 hab_niche <- setNames(vars_phylo$ssi, vars_phylo$phylo_name)
 clim_niche <- setNames(vars_phylo$climate_vol, vars_phylo$phylo_name)
@@ -187,16 +228,6 @@ boxplot(niche_phylo[,2:7])
 
 ## Variance partitioning by order, family, genus, species
 
-all_taxo <- clim %>%
-  filter(aou %in% all_vars$aou) %>%
-  mutate("phylo_name" = case_when(aou == 7222 ~ "Troglodytes_troglodytes",
-                                  aou == 6760 ~ "Seiurus_motacilla",
-                                  aou ==  6410 ~ "Vermivora_pinus",
-                                  aou == 5780 ~ "Aimophila_cassinii",
-                                  TRUE ~ matched_filename)) %>%
-  left_join(tree_taxo, by = c("phylo_name" = "TipLabel")) %>%
-  select(aou, IOCOrder, family, genus, species, phylo_name)
-
 vars_all_phylo <- all_vars %>%
   left_join(all_taxo)
 
@@ -216,6 +247,31 @@ varcomp(diet_nest, T, F)
 
 
 ## Variance partitioning: niche vs migclass/body size
+
+## Check spp overlap with mig distances from La Sorte
+common_names <- clim %>%
+  left_join(hab, by = c("species_code" = "spp")) %>%
+  left_join(dplyr::select(diet, aou, shannonE_diet), by = c("aou")) %>%
+  left_join(range) %>%
+  left_join(select(poptrend, AOU, Trend), by = c("aou" = "AOU")) %>%
+  filter(!is.na(mean_area) & !is.na(ssi)) %>%
+  left_join(ro_correlates, by = c("aou" = "AOU")) %>%
+  left_join(range_overlap) %>%
+  select(english_common_name, aou, species_code, migclass)
+
+mig_files <- list.files("/Users/gracedicecco/git/photoperiod-master/data/eBird")
+mig_names <- data.frame(file = mig_files) %>%
+  mutate(spp_common = word(file, 1, 1, sep =fixed('.'))) %>%
+  mutate(english_common_name = gsub("_", " ", spp_common)) 
+                        
+join_mig <- common_names %>%
+  mutate(english_common_name = gsub("'", " ", english_common_name)) %>%
+  left_join(mig_names)%>%
+  mutate(distance = ifelse(is.na(file), 0, 1))
+table(join_mig$migclass, join_mig$distance)
+# neotrop: 17 no, 31 yes
+# short: 41 no, 1 yes
+# resid: 16 no, 0 yes
 
 varpart <- all_vars %>%
   summarize(trend_all = summary(lm(Trend ~ climate_vol + ssi + shannonE_diet + migclass + logMass, .))$r.squared,
