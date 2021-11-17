@@ -6,8 +6,13 @@ library(nlme)
 library(ape)
 library(phytools)
 library(cowplot)
+library(vegan)
 
 ## Read in data
+
+# migratory distance
+mig_unnest <- read_csv("derived_data/migratory_distance.csv") %>%
+  select(aou, mig_dist_m)
 
 # Taxonomy
 tree_taxo <- read_csv("raw_data/BLIOCPhyloMasterTax.csv")
@@ -120,67 +125,85 @@ all_vars_taxo <- all_vars %>%
   left_join(all_taxo) %>%
   dplyr::group_by(family) %>%
   mutate(n_spp = n_distinct(aou)) %>%
-  mutate(family_plot = case_when(n_spp == 1 ~ "Other",
-                                 TRUE ~ family))
+  mutate(family_plot = case_when(family %in% c("Hirundinidae", "Corvidae", "Parulidae", "Icteridae") ~ family,
+                                 family == "Emberizidae" ~ "Passerellidae",
+                                 TRUE ~ "Other"))
 
-family_cols <- c(RColorBrewer::brewer.pal(12,"Paired"), "gray")
+family_cols <- c(RColorBrewer::brewer.pal(5,"Set1"), "gray")
 
 theme_set(theme_classic(base_size = 15))
-diet_hab <- ggplot(all_vars_taxo, aes(x = shannonE_diet, y = -1*ssi, col = family_plot, size = Brange_Area_km2)) + 
+diet_hab <- ggplot(all_vars_taxo, aes(x = shannonE_diet, y = -1*ssi, col = fct_relevel(family_plot, "Other", after = Inf), size = Brange_Area_km2)) + 
   geom_point(alpha= 0.75) +
-  geom_text(data = filter(all_vars_taxo, species_code %in% c("purfin")),
-            aes(y = -1*ssi + 0.1, label = species_code), col = "black") +
   annotate(geom = "text", y = -3, x = 0.1, label = "Specialist") +
   annotate(geom = "text", y = -3, x = 0.75, label = "Generalist") +
+  annotate(geom = "text", y = 0, x = 0.1, label = "Generalist") +
   annotate(geom = "text", x = 0.75, y = -0.5, 
-           label = paste0("r = ", round(cor(all_vars_taxo$ssi, all_vars_taxo$shannonE_diet, use = "pairwise.complete.obs"), 2))) +
-  labs(x = " ", y = "Habitat niche breadth", col = "Family", size = "Breeding range area") +
+           label = paste0("r = ", round(cor(-1*all_vars_taxo$ssi, all_vars_taxo$shannonE_diet, use = "pairwise.complete.obs"), 2))) +
+  labs(x = " ", y = "Habitat niche breadth", col = "Family", size = "Breeding range area (km^2)") +
   scale_color_manual(values = family_cols)
 
-clim_hab <- ggplot(all_vars_taxo, aes(x = climate_vol, y = -1*ssi, col = family_plot, size = Brange_Area_km2)) + 
+clim_hab <- ggplot(all_vars_taxo, aes(x = climate_vol, y = -1*ssi, col = fct_relevel(family_plot, "Other", after = Inf), size = Brange_Area_km2)) + 
   geom_point(alpha = 0.75) +
-  geom_text(data = filter(all_vars_taxo, species_code %in% c("purfin")),
-            aes(y = -1*ssi + 0.1, label = species_code), col = "black") +
   annotate(geom = "text", y = -3, x = 2.85, label = "Generalist") +
   annotate(geom = "text", y = -3, x = 0.35, label = "Specialist") +
+  annotate(geom = "text", y = -0.5, x = 0.35, label = "Generalist") +
   annotate(geom = "text", x = 3, y = -0.5, 
-           label = paste0("r = ", round(cor(all_vars$ssi, all_vars$climate_vol, use = "pairwise.complete.obs"), 2))) +
+           label = paste0("r = ", round(cor(-1*all_vars$ssi, all_vars$climate_vol, use = "pairwise.complete.obs"), 2))) +
   labs(x = "Climate niche breadth", y = "") +
   theme(legend.position = "none") +
   scale_color_manual(values = family_cols) 
 
-diet_clim <- ggplot(all_vars_taxo, aes(x = shannonE_diet, y = climate_vol, col = family_plot, size = Brange_Area_km2)) + 
+diet_clim <- ggplot(all_vars_taxo, aes(x = shannonE_diet, y = climate_vol, col = fct_relevel(family_plot, "Other", after = Inf), size = Brange_Area_km2)) + 
   geom_point(alpha= 0.75) +
-  geom_text(data = filter(all_vars_taxo, species_code %in% c("purfin")),
-            aes(y = climate_vol - 0.1, label = species_code), col = "black") +
   annotate(geom = "text", y = 0, x = 0.1, label = "Specialist") +
   annotate(geom = "text", y = 0, x = 0.75, label = "Generalist") +
+  annotate(geom = "text", y = 3.2, x = 0.1, label = "Generalist") +
   annotate(geom = "text", x = 0.75, y = 3, 
            label = paste0("r = ", round(cor(all_vars_taxo$climate_vol, all_vars_taxo$shannonE_diet, use = "pairwise.complete.obs"), 2))) +
   labs(x = "Diet niche breadth", y = "Climate niche breadth", col = "Family", size = "Breeding range area") +
   scale_color_manual(values = family_cols) +
   theme(legend.position = "none")
 
-occ_area <- ggplot(filter(all_vars_taxo, species_code != "bushti"), aes(x = mean_occ, y = mean_area, col = family_plot, size = Brange_Area_km2)) + 
+scatter_legend <- get_legend(diet_hab)
+
+plot_grid(diet_hab + theme(legend.position = "none"), clim_hab, 
+                    diet_clim, scatter_legend,
+                   nrow = 2, labels = c("a", "b", "c", "d"))
+ggsave("figures/model_input_correlations.pdf", units = "in", height = 8, width = 10)
+
+# 3 panels of response vars
+
+trend_area <- ggplot(filter(all_vars_taxo, species_code != "bushti"), aes(x = Trend, y = mean_area)) + 
   geom_point(alpha = 0.75) +
-  # geom_text(data = filter(all_vars_taxo, species_code %in% c("purfin")),
-  #           aes(y = mean_area - 0.1, label = species_code), col = "black") +
+  geom_hline(yintercept = 0, lty = 2) +
+  geom_vline(xintercept = 0, lty = 2) +
+  annotate(geom = "text", x = 2.2, y = 3.5, 
+           label = paste0("r = ", round(cor(all_vars$Trend, all_vars$mean_area, use = "pairwise.complete.obs"), 2))) +
+  labs(x = "Population trend", y = expression(paste(Delta, "Range area"))) +
+  theme(legend.position = "none")
+
+occ_area <- ggplot(filter(all_vars_taxo, species_code != "bushti"), aes(x = mean_occ, y = mean_area)) + 
+  geom_point(alpha = 0.75) +
   geom_hline(yintercept = 0, lty = 2) +
   geom_vline(xintercept = 0, lty = 2) +
   xlim(-0.3, 0.4) +
- annotate(geom = "text", x = 0.35, y = 3.5, 
+  annotate(geom = "text", x = 0.35, y = 3.5, 
            label = paste0("r = ", round(cor(all_vars$mean_occ, all_vars$mean_area, use = "pairwise.complete.obs"), 2))) +
-  labs(x = expression(paste(Delta, "Range occupancy")), y = expression(paste(Delta, "Range area"))) +
-  theme(legend.position = "none") +
-  scale_color_manual(values = family_cols) 
+  labs(x = expression(paste(Delta, "Range occupancy")), y = "") +
+  theme(legend.position = "none")
 
-scatter_legend <- get_legend(diet_hab)
-
-panels <- plot_grid(diet_hab + theme(legend.position = "none"), clim_hab, 
-                    diet_clim, occ_area,
-                   nrow = 2, labels = c("a", "b", "c", "d"))
-plot_grid(panels, scatter_legend, ncol = 2, rel_widths= c(0.8, 0.2))
-ggsave("figures/model_input_correlations.pdf", units = "in", height = 7, width = 10)
+trend_occ <- ggplot(filter(all_vars_taxo, species_code != "bushti"), aes(x = Trend, y = mean_occ)) + 
+  geom_point(alpha = 0.75) +
+  geom_hline(yintercept = 0, lty = 2) +
+  geom_vline(xintercept = 0, lty = 2) +
+  annotate(geom = "text", x = 2.2, y = 0.35, 
+           label = paste0("r = ", round(cor(all_vars$mean_occ, all_vars$Trend, use = "pairwise.complete.obs"), 2))) +
+  labs(y = expression(paste(Delta, "Range occupancy")), x = "Population trend") +
+  theme(legend.position = "none")
+  
+plot_grid(trend_area, occ_area, trend_occ, nrow =2,
+          labels = c("a", "b", "c"))
+ggsave("figures/model_response_correlations.pdf", units = "in", height= 8, width = 10)
 
 ### Phylogenetic signal of niche measurements
 
@@ -229,7 +252,7 @@ boxplot(niche_phylo[,2:7])
 ## Variance partitioning by order, family, genus, species
 
 vars_all_phylo <- all_vars %>%
-  left_join(all_taxo)
+  left_join(all_taxo) 
 
 library(nlme)
 
@@ -273,39 +296,21 @@ table(join_mig$migclass, join_mig$distance)
 # short: 41 no, 1 yes
 # resid: 16 no, 0 yes
 
-varpart <- all_vars %>%
-  summarize(trend_all = summary(lm(Trend ~ climate_vol + ssi + shannonE_diet + migclass + logMass, .))$r.squared,
-            trend_niche = summary(lm(Trend ~ climate_vol + ssi + shannonE_diet, .))$r.squared,
-            trend_other = summary(lm(Trend ~ migclass + logMass, .))$r.squared,
-            occ_all = summary(lm(mean_occ ~ climate_vol + ssi + shannonE_diet + migclass + logMass, .))$r.squared,
-            occ_niche = summary(lm(mean_occ ~ climate_vol + ssi + shannonE_diet, .))$r.squared,
-            occ_other = summary(lm(mean_occ ~ migclass + logMass, .))$r.squared,
-            area_all = summary(lm(mean_area ~ climate_vol + ssi + shannonE_diet + migclass + logMass, .))$r.squared,
-            area_niche = summary(lm(mean_area ~ climate_vol + ssi + shannonE_diet, .))$r.squared,
-            area_other = summary(lm(mean_area ~ migclass + logMass, .))$r.squared) %>%
-  mutate(trend_niche_only = trend_all - trend_other,
-         trend_other_only = trend_all - trend_niche,
-         trend_shared = trend_niche_only + trend_other_only - trend_all,
-         area_niche_only = area_all - area_other,
-         area_other_only = area_all - area_niche,
-         area_shared = area_all - area_niche_only - area_other_only,
-         occ_niche_only = occ_all - occ_other,
-         occ_other_only = occ_all - occ_niche,
-         occ_shared = occ_all - occ_niche_only - occ_other_only) 
+varpart_vars <- all_vars %>%
+  left_join(mig_unnest) %>%
+  na.omit()
 
-varpart_plot <- varpart %>%
-  select(trend_niche_only:occ_shared) %>%
-  pivot_longer(values_to = "r2", names_to = "var", trend_niche_only:occ_shared) %>%
-  mutate(response = word(var, 1, 1, sep = "_"),
-         preds = word(var, 2, sep = "_"))
+varpart_trend <- varpart(varpart_vars$Trend, ~ ssi + climate_vol + shannonE_diet, 
+                       ~ mig_dist_m, 
+                       ~ logMass,
+                       data = varpart_vars)
 
-theme_set(theme_classic(base_size = 15))
-ggplot(varpart_plot, aes(x = response, y = r2, fill = preds)) + geom_bar(position = "stack", stat = "identity") +
-  coord_flip() +
-  labs(x = "Variance explained", y = "Response variable", fill = "") +
-  scale_fill_viridis_d(labels = c("niche" = "Niche", "other" = "Life history", "shared" = "Shared")) +
-  scale_x_discrete(labels = c("trend" = "Population trend", "occ" = expression(paste(Delta, "Range occupancy")),
-                              "area" = expression(paste(Delta, "Range area")))) +
-  theme(legend.position = c(0.8, 0.6))
-ggsave("figures/variance_paritioning.pdf")
+varpart_occ <- varpart(varpart_vars$mean_occ, ~ ssi + climate_vol + shannonE_diet, 
+                       ~ mig_dist_m, 
+                       ~ logMass,
+                       data = varpart_vars)
 
+varpart_area <- varpart(varpart_vars$mean_area, ~ ssi + climate_vol + shannonE_diet, 
+                        ~ mig_dist_m, 
+                        ~ logMass,
+                        data = varpart_vars)
