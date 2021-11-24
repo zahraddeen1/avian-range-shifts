@@ -12,7 +12,7 @@ library(vegan)
 
 # migratory distance
 mig_unnest <- read_csv("derived_data/migratory_distance.csv") %>%
-  select(aou, mig_dist_m)
+  dplyr::select(aou, mig_dist_m)
 
 # Taxonomy
 tree_taxo <- read_csv("raw_data/BLIOCPhyloMasterTax.csv")
@@ -168,21 +168,22 @@ scatter_legend <- get_legend(diet_hab)
 
 plot_grid(diet_hab + theme(legend.position = "none"), clim_hab, 
                     diet_clim, scatter_legend,
-                   nrow = 2, labels = c("a", "b", "c", "d"))
+                   nrow = 2, labels = c("a", "b", "c"))
 ggsave("figures/model_input_correlations.pdf", units = "in", height = 8, width = 10)
 
 # 3 panels of response vars
 
-trend_area <- ggplot(filter(all_vars_taxo, species_code != "bushti"), aes(x = Trend, y = mean_area)) + 
+trend_area <- ggplot(filter(all_vars_taxo, species_code != "bushti"), aes(x = Trend, y = mean_area, col = fct_relevel(family_plot, "Other", after = Inf), size = Brange_Area_km2)) + 
   geom_point(alpha = 0.75) +
   geom_hline(yintercept = 0, lty = 2) +
   geom_vline(xintercept = 0, lty = 2) +
   annotate(geom = "text", x = 2.2, y = 3.5, 
            label = paste0("r = ", round(cor(all_vars$Trend, all_vars$mean_area, use = "pairwise.complete.obs"), 2))) +
   labs(x = "Population trend", y = expression(paste(Delta, "Range area"))) +
-  theme(legend.position = "none")
+  theme(legend.position = "none") +
+  scale_color_manual(values = family_cols)
 
-occ_area <- ggplot(filter(all_vars_taxo, species_code != "bushti"), aes(x = mean_occ, y = mean_area)) + 
+occ_area <- ggplot(filter(all_vars_taxo, species_code != "bushti"), aes(x = mean_occ, y = mean_area, col = fct_relevel(family_plot, "Other", after = Inf), size = Brange_Area_km2)) + 
   geom_point(alpha = 0.75) +
   geom_hline(yintercept = 0, lty = 2) +
   geom_vline(xintercept = 0, lty = 2) +
@@ -190,18 +191,21 @@ occ_area <- ggplot(filter(all_vars_taxo, species_code != "bushti"), aes(x = mean
   annotate(geom = "text", x = 0.35, y = 3.5, 
            label = paste0("r = ", round(cor(all_vars$mean_occ, all_vars$mean_area, use = "pairwise.complete.obs"), 2))) +
   labs(x = expression(paste(Delta, "Range occupancy")), y = "") +
+  scale_color_manual(values = family_cols) +
   theme(legend.position = "none")
 
-trend_occ <- ggplot(filter(all_vars_taxo, species_code != "bushti"), aes(x = Trend, y = mean_occ)) + 
+trend_occ <- ggplot(filter(all_vars_taxo, species_code != "bushti"), aes(x = Trend, y = mean_occ, col = fct_relevel(family_plot, "Other", after = Inf), size = Brange_Area_km2)) + 
   geom_point(alpha = 0.75) +
   geom_hline(yintercept = 0, lty = 2) +
   geom_vline(xintercept = 0, lty = 2) +
   annotate(geom = "text", x = 2.2, y = 0.35, 
            label = paste0("r = ", round(cor(all_vars$mean_occ, all_vars$Trend, use = "pairwise.complete.obs"), 2))) +
-  labs(y = expression(paste(Delta, "Range occupancy")), x = "Population trend") +
-  theme(legend.position = "none")
+  labs(y = expression(paste(Delta, "Range occupancy")), x = "Population trend",  col = "Family", size = "Breeding range area") +
+  scale_color_manual(values = family_cols)
+
+response_legend <- get_legend(trend_occ)
   
-plot_grid(trend_area, occ_area, trend_occ, nrow =2,
+plot_grid(trend_area, occ_area, trend_occ + theme(legend.position = "none"), response_legend, nrow =2,
           labels = c("a", "b", "c"))
 ggsave("figures/model_response_correlations.pdf", units = "in", height= 8, width = 10)
 

@@ -5,12 +5,13 @@ library(sf)
 library(tmap)
 library(raster)
 library(concaveman)
+library(lwgeom)
 
 theme_set(theme_classic(base_size = 15))
 
 info <- Sys.info()
 
-biodrive <- ifelse(info[["sysname"]] == "Windows", "\\\\ad.unc.edu\\bio\\HurlbertLab\\", "/Volumes/bio/HurlbertLab/")
+biodrive <- ifelse(info[["sysname"]] == "Windows", "\\\\ad.unc.edu\\bio\\HurlbertLab\\", "/Volumes/HurlbertLab/")
 
 ## species range maps directory
 range_dir <- paste0(biodrive, "GIS/birds/All/All/")
@@ -204,7 +205,7 @@ concave_area <- function(aou, df) {
   concave_all_noBbsBr <- st_difference(concave_all, bbs_br)
   
   # Area of concave hull + BBS/Breeding Range intersection
-  concave_all_BbsBr <- st_union(concave_all_noBbsBr, bbs_br)
+  concave_all_BbsBr <- st_union(st_make_valid(concave_all_noBbsBr), st_make_valid(bbs_br))
   
   range_outlier <- as.numeric(sum(st_area(concave_all_noBbsBr)))
   range_outlier_denom <- as.numeric(sum(st_area(concave_all_BbsBr)))
