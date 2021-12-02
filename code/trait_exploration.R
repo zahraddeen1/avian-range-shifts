@@ -304,17 +304,17 @@ varpart_vars <- all_vars %>%
   left_join(mig_unnest) %>%
   na.omit()
 
-varpart_trend <- varpart(varpart_vars$Trend, ~ ssi + climate_vol + shannonE_diet, 
+varpart_trend <- varpart(varpart_vars$Trend, ~ shannonE_diet, 
                        ~ mig_dist_m, 
                        ~ logMass,
                        data = varpart_vars)
 
-varpart_occ <- varpart(varpart_vars$mean_occ, ~ ssi + climate_vol + shannonE_diet, 
+varpart_occ <- varpart(varpart_vars$mean_occ, ~ ssi, 
                        ~ mig_dist_m, 
                        ~ logMass,
                        data = varpart_vars)
 
-varpart_area <- varpart(varpart_vars$mean_area, ~ ssi + climate_vol + shannonE_diet, 
+varpart_area <- varpart(varpart_vars$mean_area, ~ climate_vol, 
                         ~ mig_dist_m, 
                         ~ logMass,
                         data = varpart_vars)
