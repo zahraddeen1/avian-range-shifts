@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #SBATCH --job-name=spp_range_hi
-#SBATCH --time=5-0
+#SBATCH --time=10-0
 #SBATCH -N 1
 #SBATCH -n 10
 #SBATCH --mem-per-cpu=10G
