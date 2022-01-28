@@ -10,6 +10,7 @@ library(raster)
 library(concaveman)
 library(foreach)
 library(doParallel)
+library(lwgeom)
 
 c <- 10
 registerDoParallel(cores = c)

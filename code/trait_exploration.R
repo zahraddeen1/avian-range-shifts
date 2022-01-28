@@ -261,17 +261,40 @@ vars_all_phylo <- all_vars %>%
 library(nlme)
 
 hab_nest <- lme(ssi ~ 1, random = ~ 1|family/genus, data = vars_all_phylo)
-varcomp(hab_nest, T, F)
+hab_var <- varcomp(hab_nest, T, F)
 
 clim_nest <- lme(climate_vol ~ 1, random = ~ 1|family/genus, data = vars_all_phylo)
-varcomp(clim_nest, T, F)
+clim_var <- varcomp(clim_nest, T, F)
 
-diet_nest <- lme(shannonE_diet ~ 1, random = ~ 1|family/genus, data = vars_all_phylo)
-varcomp(diet_nest, T, F)
+diet_nest <- lme(shannonE_diet ~ 1, random = ~ 1|family/genus, data = filter(vars_all_phylo, !is.na(shannonE_diet)))
+diet_var <- varcomp(diet_nest, T, F)
 
 ## Make line graph of this for supplement
 
+niche_var <- data.frame(niche = "hab", family = hab_var[[1]], 
+                        genus =hab_var[[2]],
+                        species = hab_var[[3]]) %>%
+  bind_rows(data.frame(niche = "clim", family = clim_var[[1]], 
+                       genus =clim_var[[2]],
+                       species = clim_var[[3]])) %>%
+  bind_rows(data.frame(niche = "diet", family = diet_var[[1]], 
+             genus =diet_var[[2]],
+             species = diet_var[[3]])) %>%
+  pivot_longer(names_to = "phylo", values_to = "var", family:species)
 
+theme_set(theme_classic(base_size = 15))
+ggplot(niche_var, aes(x = phylo, y = var, col = niche, group = niche)) + 
+  geom_line(cex = 1) +
+  scale_x_discrete(labels = c("family" = "Family",
+                              "genus" = "Genus",
+                              "species" = "Species")) +
+  scale_color_brewer(palette = "Dark2",
+                     labels = c("clim" = "Climate",
+                                "diet" = "Diet",
+                                "hab" = "Habitat")) +
+  labs(x = "", y = "Variance explained in niche breadth", col = "Niche axis") +
+  theme(legend.position = c(0.8, 0.2))
+ggsave("figures/suppl_phylo_varcomp.pdf")
 
 ## Variance partitioning: niche vs migclass/body size
 

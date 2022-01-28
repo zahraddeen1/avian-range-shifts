@@ -237,3 +237,91 @@ concave_hull <- tm_shape(na_crop) + tm_polygons() +
 panels <- tmap_arrange(range_map, concave_hull, nrow = 1)
 tmap_save(panels, "figures/methods_fig_range.pdf", units = "in", height = 5, width = 10)
 
+#### Supplemental figure: hi, med, lo concavity ####
+# Use American crow: 4880
+
+## Example species
+
+aou <- 4880
+
+f <- spp_list$file[spp_list$aou == aou]
+
+br <- read_sf(paste0(range_dir, f))
+names(br)[1:14] <- toupper(names(br)[1:14])
+
+# Use extant (PRESENCE 1-3) breeding and resident ranges (SEASONAL 1-2) only
+# Re-project to land cover CRS
+breeding_range <- br %>%
+  filter(PRESENCE %in% c(1:3), SEASONAL %in% c(1:2))
+
+# Spp BBS occurrences
+spp_counts_t1 <- counts_subs %>%
+  filter(year >= 1976, year < 1981, aou == 4880) %>%
+  mutate(lat_cell = round(latitude),
+         lon_cell = round(longitude),
+         cell_id = paste0(lon_cell, ",", lat_cell))
+
+# Spp grid cell occurrences
+spp_routes_t1 <- routes_subs %>%
+  filter(cell_id %in% spp_counts_t1$cell_id) %>%
+  dplyr::select(-n_routes,-cell_id, -early_yrs, -late_yrs)
+
+# Raster of occurrences time 1
+pts_t1 <- as(spp_routes_t1, "Spatial")
+
+routes_raster_t1 <- raster(crs = crs(pts_t1), vals = 0, resolution = c(1,1), ext = extent(c(-180, 180, -90, 90))) %>%
+  rasterize(pts_t1, .)
+
+# Spp concave hull concav=1,2,3
+
+concave1 <- spp_routes_t1 %>%
+  concaveman(., concavity = 1) %>%
+  st_buffer(0)
+
+concave2 <- spp_routes_t1 %>%
+  concaveman(., concavity = 2) %>%
+  st_buffer(0)
+
+concave3 <- spp_routes_t1 %>%
+  concaveman(., concavity = 3) %>%
+  st_buffer(0)
+
+routes_raster_id <- raster(routes_raster_t1, layer = 2)
+
+na_crop <- na_map %>%
+  st_crop(c(ymin = 19, ymax = 56, xmin = -142, xmax = -50))
+
+map_cc1 <- tm_shape(na_crop) + tm_polygons() + 
+  tm_shape(concave1) + tm_polygons(col = "gray45", alpha = 0.5) +
+  tm_shape(routes_raster_id) + tm_raster("n_bins", alpha = 0.75, legend.show = F, palette = "Dark2") +
+  tm_layout(main.title = c("(a) Concavity = 1"), title = "American crow", title.position = c("left","bottom"), 
+            inner.margins = c(0.2,0,0.2,0),  outer.margins = c(0,0,0,0))
+
+map_cc2 <- tm_shape(na_crop) + tm_polygons() + 
+  tm_shape(concave2) + tm_polygons(col = "gray45", alpha = 0.5) +
+  tm_shape(routes_raster_id) + tm_raster("n_bins", alpha = 0.75, legend.show = F, palette = "Dark2")+
+  tm_layout(main.title = c("(b) Concavity = 2"), 
+            inner.margins = c(0.2,0,0.2,0),  outer.margins = c(0,0,0,0))
+
+map_cc3 <- tm_shape(na_crop) + tm_polygons() + 
+  tm_shape(concave3) + tm_polygons(col = "gray45", alpha = 0.5) +
+  tm_shape(routes_raster_id) + tm_raster("n_bins", alpha = 0.75, legend.show = F, palette = "Dark2")+
+  tm_layout(main.title = c("(c) Concavity = 3"), 
+          inner.margins = c(0.2,0,0.2,0), 
+          outer.margins = c(0,0,0,0))
+
+area_cc_var <- read_csv("derived_data/delta_area_concav_sensitivity.csv")
+viol <- ggplot(filter(area_cc_var, aou != 7670), aes(x = as.factor(concav), y = delta_area)) +
+  geom_violin(fill = "gray", draw_quantiles = c(0.5)) + theme_set(theme_classic(base_size = 15)) +
+  labs(x = "Concavity", y = expression(paste(Delta, "Range area")), title = "(d)")
+
+pdf("figures/suppl_concavity_examples.pdf")
+pushViewport(viewport(layout = grid.layout(2, 2)))
+vplayout <- function(x, y) viewport(layout.pos.row = x, layout.pos.col = y)
+print(map_cc1, vp = vplayout(1, 1))
+print(map_cc2, vp = vplayout(1, 2))
+print(map_cc3, vp = vplayout(2, 1))
+print(viol, vp = vplayout(2, 2))
+dev.off()
+
+
