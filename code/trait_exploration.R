@@ -28,7 +28,10 @@ diet <- read_csv("derived_data/diet_niche_breadth.csv")
 range <- read_csv("derived_data/range_metrics_sampled.csv") %>%
   group_by(aou) %>%
   dplyr::summarize(mean_area = mean((area_t2-area_t1)/area_t1, na.rm = T),
+                   sd_area = sd(mean(area_t2 - area_t1)/area_t1, na.rm = T),
             mean_occ = mean((total_cells_t2 - total_cells_t1)/overlap_cells, na.rm = T))
+
+range_all <- read_csv("derived_data/range_metrics_sampled.csv")
 
 poptrend <- read_csv("raw_data/BBS_1966-2017_core_trend_revised_v2.csv", 
                      col_types = cols(AOU = col_double())) %>%
@@ -73,7 +76,7 @@ all_taxo <- clim %>%
                                   aou == 5780 ~ "Aimophila_cassinii",
                                   TRUE ~ matched_filename)) %>%
   left_join(tree_taxo, by = c("phylo_name" = "TipLabel")) %>%
-  select(aou, IOCOrder, family, genus, species, phylo_name)
+  dplyr::select(aou, IOCOrder, family, genus, species, phylo_name)
 
 vars_phylo <- all_vars %>%
   left_join(spp_taxo)
@@ -140,7 +143,8 @@ diet_hab <- ggplot(all_vars_taxo, aes(x = shannonE_diet, y = -1*ssi, col = fct_r
   annotate(geom = "text", x = 0.75, y = -0.5, 
            label = paste0("r = ", round(cor(-1*all_vars_taxo$ssi, all_vars_taxo$shannonE_diet, use = "pairwise.complete.obs"), 2))) +
   labs(x = " ", y = "Habitat niche breadth", col = "Family", size = "Breeding range area (km^2)") +
-  scale_color_manual(values = family_cols)
+  scale_color_manual(values = family_cols) +
+  scale_size_continuous(range = c(3, 10))
 
 clim_hab <- ggplot(all_vars_taxo, aes(x = climate_vol, y = -1*ssi, col = fct_relevel(family_plot, "Other", after = Inf), size = Brange_Area_km2)) + 
   geom_point(alpha = 0.75) +
@@ -151,7 +155,8 @@ clim_hab <- ggplot(all_vars_taxo, aes(x = climate_vol, y = -1*ssi, col = fct_rel
            label = paste0("r = ", round(cor(-1*all_vars$ssi, all_vars$climate_vol, use = "pairwise.complete.obs"), 2))) +
   labs(x = "Climate niche breadth", y = "") +
   theme(legend.position = "none") +
-  scale_color_manual(values = family_cols) 
+  scale_color_manual(values = family_cols) +
+  scale_size_continuous(range = c(3, 10))
 
 diet_clim <- ggplot(all_vars_taxo, aes(x = shannonE_diet, y = climate_vol, col = fct_relevel(family_plot, "Other", after = Inf), size = Brange_Area_km2)) + 
   geom_point(alpha= 0.75) +
@@ -162,7 +167,8 @@ diet_clim <- ggplot(all_vars_taxo, aes(x = shannonE_diet, y = climate_vol, col =
            label = paste0("r = ", round(cor(all_vars_taxo$climate_vol, all_vars_taxo$shannonE_diet, use = "pairwise.complete.obs"), 2))) +
   labs(x = "Diet niche breadth", y = "Climate niche breadth", col = "Family", size = "Breeding range area") +
   scale_color_manual(values = family_cols) +
-  theme(legend.position = "none")
+  theme(legend.position = "none")+
+  scale_size_continuous(range = c(3, 10))
 
 scatter_legend <- get_legend(diet_hab)
 
@@ -181,7 +187,8 @@ trend_area <- ggplot(filter(all_vars_taxo, species_code != "bushti"), aes(x = Tr
            label = paste0("r = ", round(cor(all_vars$Trend, all_vars$mean_area, use = "pairwise.complete.obs"), 2))) +
   labs(x = "Population trend", y = expression(paste(Delta, "Range area"))) +
   theme(legend.position = "none") +
-  scale_color_manual(values = family_cols)
+  scale_color_manual(values = family_cols)+
+  scale_size_continuous(range = c(3, 8))
 
 occ_area <- ggplot(filter(all_vars_taxo, species_code != "bushti"), aes(x = mean_occ, y = mean_area, col = fct_relevel(family_plot, "Other", after = Inf), size = Brange_Area_km2)) + 
   geom_point(alpha = 0.75) +
@@ -192,7 +199,8 @@ occ_area <- ggplot(filter(all_vars_taxo, species_code != "bushti"), aes(x = mean
            label = paste0("r = ", round(cor(all_vars$mean_occ, all_vars$mean_area, use = "pairwise.complete.obs"), 2))) +
   labs(x = expression(paste(Delta, "Range occupancy")), y = "") +
   scale_color_manual(values = family_cols) +
-  theme(legend.position = "none")
+  theme(legend.position = "none")+
+  scale_size_continuous(range = c(3, 8))
 
 trend_occ <- ggplot(filter(all_vars_taxo, species_code != "bushti"), aes(x = Trend, y = mean_occ, col = fct_relevel(family_plot, "Other", after = Inf), size = Brange_Area_km2)) + 
   geom_point(alpha = 0.75) +
@@ -201,13 +209,18 @@ trend_occ <- ggplot(filter(all_vars_taxo, species_code != "bushti"), aes(x = Tre
   annotate(geom = "text", x = 2.2, y = 0.35, 
            label = paste0("r = ", round(cor(all_vars$mean_occ, all_vars$Trend, use = "pairwise.complete.obs"), 2))) +
   labs(y = expression(paste(Delta, "Range occupancy")), x = "Population trend",  col = "Family", size = "Breeding range area") +
-  scale_color_manual(values = family_cols)
+  scale_color_manual(values = family_cols)+
+  scale_size_continuous(range = c(3, 8))
 
 response_legend <- get_legend(trend_occ)
   
 plot_grid(trend_area, occ_area, trend_occ + theme(legend.position = "none"), response_legend, nrow =2,
           labels = c("a", "b", "c"))
 ggsave("figures/model_response_correlations.pdf", units = "in", height= 8, width = 10)
+
+cor.test(all_vars$Trend, all_vars$mean_area, use = "pairwise.complete.obs")
+cor.test(all_vars$mean_occ, all_vars$mean_area, use = "pairwise.complete.obs")
+cor.test(all_vars$mean_occ, all_vars$Trend, use = "pairwise.complete.obs")
 
 ### Phylogenetic signal of niche measurements
 

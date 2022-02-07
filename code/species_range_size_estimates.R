@@ -11,7 +11,7 @@ theme_set(theme_classic(base_size = 15))
 
 info <- Sys.info()
 
-biodrive <- ifelse(info[["sysname"]] == "Windows", "\\\\ad.unc.edu\\bio\\HurlbertLab\\", "/Volumes/HurlbertLab/")
+biodrive <- ifelse(info[["sysname"]] == "Windows", "\\\\ad.unc.edu\\bio\\HurlbertLab\\", "/Volumes/bio/HurlbertLab/")
 
 ## species range maps directory
 range_dir <- paste0(biodrive, "GIS/birds/All/All/")
