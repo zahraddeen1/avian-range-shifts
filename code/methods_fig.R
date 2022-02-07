@@ -117,13 +117,13 @@ spp_routes_t2 <- routes_subs %>%
   dplyr::select(-n_routes)
 
   # Raster of occurrences time 1
-  pts_t1 <- as(spp_routes_t1, "Spatial")
+  pts_t1 <- as(dplyr::select(spp_routes_t1, n_bins), "Spatial")
   
   routes_raster_t1 <- raster(crs = crs(pts_t1), vals = 0, resolution = c(1,1), ext = extent(c(-180, 180, -90, 90))) %>%
     rasterize(pts_t1, .)
   
   # Raster of occurrences time 2
-  pts_t2 <- as(spp_routes_t2, "Spatial")
+  pts_t2 <- as(dplyr::select(spp_routes_t2, n_bins), "Spatial")
   
   routes_raster_t2 <- raster(crs = crs(pts_t2), vals = 0, resolution = c(1,1), ext = extent(c(-180, 180, -90, 90))) %>%
     rasterize(pts_t2, .)
@@ -131,12 +131,11 @@ spp_routes_t2 <- routes_subs %>%
   # Spp concave hull time 1
   
   concave <- spp_routes_t1 %>%
-    concaveman(., concavity = 2) %>%
-    st_buffer(0)
+    concaveman(., concavity = 2) 
   
-  concave_sub <- st_intersection(concave, st_buffer(breeding_range, 0))
+  concave_sub <- st_intersection(concave, st_make_valid(breeding_range))
   
-  concave_nobr <- st_difference(concave, st_buffer(breeding_range, 0))
+  concave_nobr <- st_difference(concave, st_make_valid(breeding_range))
   
   concave_nobr_cast <- st_cast(concave_nobr, "POLYGON") %>%
     mutate(polygonID = row.names(.))
@@ -168,9 +167,9 @@ concave2 <- spp_routes_t2 %>%
   concaveman(., concavity = 2) %>%
   st_buffer(0)
 
-concave_sub2 <- st_intersection(concave2, st_buffer(breeding_range, 0))
+concave_sub2 <- st_intersection(concave2, st_make_valid(breeding_range))
 
-concave_nobr2 <- st_difference(concave2, st_buffer(breeding_range, 0))
+concave_nobr2 <- st_difference(concave2, st_make_valid(breeding_range))
 
 concave_nobr_cast2 <- st_cast(concave_nobr2, "POLYGON") %>%
   mutate(polygonID = row.names(.))
@@ -199,7 +198,7 @@ if(nrow(routes_sf2) > 0) {
 ## Range map with BBS occurrences
 
 br_cells <- routes_subs %>%
-  st_intersection(breeding_range) 
+  st_intersection(st_make_valid(breeding_range))
 
 spp_routes_all <- br_cells %>%
   dplyr::select(cell_id, n_routes, n_bins, early_yrs, late_yrs) %>%
