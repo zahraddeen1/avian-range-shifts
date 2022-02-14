@@ -29,7 +29,8 @@ range <- read_csv("derived_data/range_metrics_sampled.csv") %>%
   group_by(aou) %>%
   dplyr::summarize(mean_area = mean((area_t2-area_t1)/area_t1, na.rm = T),
                    sd_area = sd(mean(area_t2 - area_t1)/area_t1, na.rm = T),
-            mean_occ = mean((total_cells_t2 - total_cells_t1)/overlap_cells, na.rm = T))
+            mean_occ = mean((total_cells_t2 - total_cells_t1)/overlap_cells, na.rm = T),
+            min_cells = min(c(total_cells_t1, total_cells_t2), na.rm = T))
 
 range_all <- read_csv("derived_data/range_metrics_sampled.csv")
 
@@ -49,13 +50,13 @@ all_vars <- clim %>%
   left_join(hab, by = c("species_code" = "spp")) %>%
   left_join(dplyr::select(diet, aou, shannonE_diet), by = c("aou")) %>%
   left_join(range) %>%
+  filter(min_cells > 10) %>%
   left_join(select(poptrend, AOU, Trend), by = c("aou" = "AOU")) %>%
   filter(!is.na(mean_area) & !is.na(ssi)) %>%
   left_join(ro_correlates, by = c("aou" = "AOU")) %>%
   left_join(range_overlap) %>%
   select(aou, species_code, climate_vol, ssi, shannonE_diet, mean_area, mean_occ, Trend, logMass,
-         log_Brange_Area, Brange_Area_km2, overlap) %>%
-  filter(species_code != "wesblu")
+         log_Brange_Area, Brange_Area_km2, overlap)
 
 ## Taxonomy included
 spp_taxo <- clim %>%
@@ -179,7 +180,7 @@ ggsave("figures/model_input_correlations.pdf", units = "in", height = 8, width =
 
 # 3 panels of response vars
 
-trend_area <- ggplot(filter(all_vars_taxo, species_code != "bushti"), aes(x = Trend, y = mean_area, col = fct_relevel(family_plot, "Other", after = Inf), size = Brange_Area_km2)) + 
+trend_area <- ggplot(all_vars_taxo, aes(x = Trend, y = mean_area, col = fct_relevel(family_plot, "Other", after = Inf), size = Brange_Area_km2)) + 
   geom_point(alpha = 0.75) +
   geom_hline(yintercept = 0, lty = 2) +
   geom_vline(xintercept = 0, lty = 2) +
@@ -202,7 +203,7 @@ occ_area <- ggplot(filter(all_vars_taxo, species_code != "bushti"), aes(x = mean
   theme(legend.position = "none")+
   scale_size_continuous(range = c(3, 8))
 
-trend_occ <- ggplot(filter(all_vars_taxo, species_code != "bushti"), aes(x = Trend, y = mean_occ, col = fct_relevel(family_plot, "Other", after = Inf), size = Brange_Area_km2)) + 
+trend_occ <- ggplot(all_vars_taxo, aes(x = Trend, y = mean_occ, col = fct_relevel(family_plot, "Other", after = Inf), size = Brange_Area_km2)) + 
   geom_point(alpha = 0.75) +
   geom_hline(yintercept = 0, lty = 2) +
   geom_vline(xintercept = 0, lty = 2) +

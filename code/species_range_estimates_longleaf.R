@@ -93,7 +93,6 @@ spp <- spp_overlap %>%
 
 ## Fit concave hulls function, needs AOU and BBS counts data for that species
 # Calculate range metrics
-
 concave_area <- function(aou, df) {
   print(aou)
   
@@ -135,10 +134,10 @@ concave_area <- function(aou, df) {
       filter(polygonID %in% routes_sf$polygonID)
     
     concave_all <- st_union(add_shp, concave_sub)
-    
+    concave_all <- st_union(concave_all)
     
   } else {
-    concave_all <- concave_sub
+    concave_all <- st_union(concave_sub)
   }
   
   # Check for outliers in concave algorithm
