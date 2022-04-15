@@ -145,7 +145,7 @@ diet_hab <- ggplot(all_vars_taxo, aes(x = shannonE_diet, y = -1*ssi, col = fct_r
            label = paste0("r = ", round(cor(-1*all_vars_taxo$ssi, all_vars_taxo$shannonE_diet, use = "pairwise.complete.obs"), 2))) +
   labs(x = " ", y = "Habitat niche breadth", col = "Family", size = "Breeding range area (km^2)") +
   scale_color_manual(values = family_cols) +
-  scale_size_continuous(range = c(3, 10))
+  scale_size_continuous(range = c(3, 10)) + guides(color = guide_legend(override.aes= list(size = 5)))
 
 clim_hab <- ggplot(all_vars_taxo, aes(x = climate_vol, y = -1*ssi, col = fct_relevel(family_plot, "Other", after = Inf), size = Brange_Area_km2)) + 
   geom_point(alpha = 0.75) +
@@ -186,10 +186,10 @@ trend_area <- ggplot(all_vars_taxo, aes(x = Trend, y = mean_area, col = fct_rele
   geom_vline(xintercept = 0, lty = 2) +
   annotate(geom = "text", x = 2.2, y = 3.5, 
            label = paste0("r = ", round(cor(all_vars$Trend, all_vars$mean_area, use = "pairwise.complete.obs"), 2))) +
-  labs(x = "Population trend", y = expression(paste(Delta, "Range area"))) +
+  labs(x = "", y = expression(paste(Delta, "Range area"))) +
   theme(legend.position = "none") +
   scale_color_manual(values = family_cols)+
-  scale_size_continuous(range = c(3, 8))
+  scale_size_continuous(range = c(3, 8)) +  guides(color = guide_legend(override.aes= list(size = 5)))
 
 occ_area <- ggplot(filter(all_vars_taxo, species_code != "bushti"), aes(x = mean_occ, y = mean_area, col = fct_relevel(family_plot, "Other", after = Inf), size = Brange_Area_km2)) + 
   geom_point(alpha = 0.75) +
@@ -211,7 +211,7 @@ trend_occ <- ggplot(all_vars_taxo, aes(x = Trend, y = mean_occ, col = fct_releve
            label = paste0("r = ", round(cor(all_vars$mean_occ, all_vars$Trend, use = "pairwise.complete.obs"), 2))) +
   labs(y = expression(paste(Delta, "Range occupancy")), x = "Population trend",  col = "Family", size = "Breeding range area") +
   scale_color_manual(values = family_cols)+
-  scale_size_continuous(range = c(3, 8))
+  scale_size_continuous(range = c(3, 8)) +  guides(color = guide_legend(override.aes= list(size = 5)))
 
 response_legend <- get_legend(trend_occ)
   
