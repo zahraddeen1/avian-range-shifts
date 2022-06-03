@@ -368,7 +368,7 @@ ggsave('figures/range_area_occ_hist.pdf', units = "in", height = 8, width = 10)
 order_outlier <- range_metrics_sum %>%
   arrange(desc(mean_outlier_t1))
 
-pdf("figures/spp_range_estimates.pdf", height = 8, width = 10)
+pdf("bigdata/spp_range_estimates_final.pdf", height = 8, width = 10)
 for(s in order_outlier$aou) {
   name <- spp$english_common_name[spp$aou == s]
   
@@ -431,14 +431,15 @@ for(s in order_outlier$aou) {
     # Spp concave hull time 1
   
   concave <- spp_routes_t1 %>%
-    concaveman(., concavity = 2) %>%
-    st_buffer(0)
-    
-  concave_sub <- st_intersection(concave, st_buffer(breeding_range, 0))
+    concaveman(., concavity = 2)  %>%
+    # st_buffer(0) %>%
+    st_make_valid()
   
-  concave_nobr <- st_difference(concave, st_buffer(breeding_range, 0))
+  concave_sub <- st_intersection(st_make_valid(concave), st_make_valid(breeding_range))
   
-  concave_nobr_cast <- st_cast(concave_nobr, "POLYGON") %>%
+  concave_nobr <- st_difference(concave, st_make_valid(breeding_range))
+  
+  concave_nobr_cast <- st_cast(st_make_valid(concave_nobr), "POLYGON") %>%
     mutate(polygonID = row.names(.))
   
   # does concave area have at least 2 BBS routes in it?
@@ -455,7 +456,7 @@ for(s in order_outlier$aou) {
     add_shp <- concave_nobr_cast %>%
       filter(polygonID %in% routes_sf$polygonID)
     
-    concave_all <- st_union(add_shp, st_buffer(concave_sub, 0))
+    concave_all <- st_union(add_shp, st_buffer(st_make_valid(concave_sub), 0))
     
     
   } else {
@@ -466,13 +467,14 @@ for(s in order_outlier$aou) {
   
   concave2 <- spp_routes_t2 %>%
     concaveman(., concavity = 2) %>%
-    st_buffer(0)
+    # st_buffer(0) %>%
+    st_make_valid()
   
-  concave_sub2 <- st_intersection(concave2, st_buffer(breeding_range, 0))
+  concave_sub2 <- st_intersection(concave2, st_make_valid(breeding_range))
   
-  concave_nobr2 <- st_difference(concave2, st_buffer(breeding_range, 0))
+  concave_nobr2 <- st_difference(concave2, st_make_valid(breeding_range))
   
-  concave_nobr_cast2 <- st_cast(concave_nobr2, "POLYGON") %>%
+  concave_nobr_cast2 <- st_cast(st_make_valid(concave_nobr2), "POLYGON") %>%
     mutate(polygonID = row.names(.))
   
   # does concave area have at least 2 BBS routes in it?
@@ -489,7 +491,7 @@ for(s in order_outlier$aou) {
     add_shp2 <- concave_nobr_cast2 %>%
       filter(polygonID %in% routes_sf2$polygonID)
     
-    concave_all2 <- st_union(add_shp2, st_buffer(concave_sub2, 0))
+    concave_all2 <- st_union(add_shp2, st_buffer(st_make_valid(concave_sub2), 0))
     
     
   } else {

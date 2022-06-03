@@ -4,6 +4,7 @@ library(tidyverse)
 library(piecewiseSEM)
 library(nlme)
 library(ape)
+library(phytools)
 
 ## Read in data
 
@@ -107,7 +108,7 @@ vars_phylo <- range_mod %>%
   left_join(spp_taxo)
 
 bird_trees <- read.nexus("raw_data/birdtrees/output.nex")
-tree1 <- bird_trees$tree_6755
+tree1 <- consensus.edges(bird_trees)
 
 ## Fit piecewiseSEM
 
