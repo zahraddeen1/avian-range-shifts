@@ -340,6 +340,7 @@ table(join_mig$migclass, join_mig$distance)
 varpart_vars <- all_vars %>%
   left_join(mig_unnest) %>%
   na.omit()
+### 16 spp with mig_dist_m == 0
 
 varpart_trend <- varpart(varpart_vars$Trend, ~ shannonE_diet, 
                        ~ mig_dist_m, 
